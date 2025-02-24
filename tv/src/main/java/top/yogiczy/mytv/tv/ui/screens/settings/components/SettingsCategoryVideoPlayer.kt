@@ -1,6 +1,11 @@
 package top.yogiczy.mytv.tv.ui.screens.settings.components
 
+import android.os.Build
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -8,6 +13,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.tv.material3.Switch
 import top.yogiczy.mytv.core.util.utils.humanizeMs
@@ -15,6 +21,7 @@ import top.yogiczy.mytv.tv.ui.material.LocalPopupManager
 import top.yogiczy.mytv.tv.ui.material.SimplePopup
 import top.yogiczy.mytv.tv.ui.screens.components.SelectDialog
 import top.yogiczy.mytv.tv.ui.screens.settings.SettingsViewModel
+import top.yogiczy.mytv.tv.ui.screens.x5.UpdateViewModel
 import top.yogiczy.mytv.tv.ui.screens.videoplayerdiaplaymode.VideoPlayerDisplayModeScreen
 import top.yogiczy.mytv.tv.ui.utils.Configs
 
@@ -22,7 +29,10 @@ import top.yogiczy.mytv.tv.ui.utils.Configs
 fun SettingsCategoryVideoPlayer(
     modifier: Modifier = Modifier,
     settingsViewModel: SettingsViewModel = viewModel(),
+    updateViewModel: UpdateViewModel = viewModel(),
 ) {
+    val context = LocalContext.current
+    updateViewModel.checkUpdate(context)
     SettingsContentList(modifier) {
         item {
             SettingsListItem(
@@ -42,7 +52,8 @@ fun SettingsCategoryVideoPlayer(
 
         item {
             SettingsListItem(
-                headlineContent = "强制音频软解",
+                headlineContent = "解码",
+                supportingContent = "默认硬解码，可选软解码",
                 trailingContent = {
                     Switch(settingsViewModel.videoPlayerForceAudioSoftDecode, null)
                 },
@@ -51,6 +62,45 @@ fun SettingsCategoryVideoPlayer(
                         !settingsViewModel.videoPlayerForceAudioSoftDecode
                 },
             )
+        }
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
+            item {
+                AnimatedVisibility(
+                    visible = updateViewModel.isUpdateAvailable,
+                    enter = fadeIn(),
+                    exit = fadeOut()
+                ) {
+                    val focusRequester = remember { FocusRequester() }
+
+                    SettingsListItem(
+                        modifier = Modifier.focusRequester(focusRequester),
+                        headlineContent = "腾讯X5 WebView 安装",
+                        supportingContent = updateViewModel.process,
+                        onSelected = {
+                            updateViewModel.loadX5(context,20,null)
+                        },
+                    )
+                }
+                AnimatedVisibility(
+                    visible = updateViewModel.isSuccessInstalled,
+                    enter = fadeIn(),
+                    exit = fadeOut()
+                ) {
+                    val focusRequester = remember { FocusRequester() }
+                    SettingsListItem(
+                        modifier = Modifier.focusRequester(focusRequester),
+                        headlineContent = "启用腾讯X5WebView",
+                        supportingContent = "默认使用系统内置WebView，开启使用腾讯X5内核，打开开关后，请重启本APP后生效",
+                        trailingContent = {
+                            Switch(!settingsViewModel.sysWebViewMode, null)
+                        },
+                        onSelected = {
+                            settingsViewModel.sysWebViewMode =
+                                !settingsViewModel.sysWebViewMode
+                        },
+                    )
+                }
+            }
         }
 
         item {
@@ -144,5 +194,9 @@ fun SettingsCategoryVideoPlayer(
                 remoteConfig = true,
             )
         }
+    }
+    // 当组件重新显示时，请求焦点
+    LaunchedEffect(Unit) {
+            //focusRequester.requestFocus()
     }
 }

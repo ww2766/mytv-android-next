@@ -14,7 +14,7 @@ interface IptvParser {
     /**
      * 解析直播源数据
      */
-    suspend fun parse(data: String): ChannelGroupList
+    suspend fun parse(data: String): MutableList<IptvResponseItem>// ChannelGroupList
 
     companion object {
         val instances = listOf(
@@ -23,4 +23,11 @@ interface IptvParser {
             DefaultIptvParser(),
         )
     }
+    data class IptvResponseItem(
+        val name: String,
+        val channelName: String,
+        val groupName: String,
+        val url: String,
+        val logo: String?,
+    )
 }

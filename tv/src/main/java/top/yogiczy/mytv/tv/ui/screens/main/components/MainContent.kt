@@ -1,10 +1,18 @@
 package top.yogiczy.mytv.tv.ui.screens.main.components
 
+import android.view.View
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.tencent.smtt.sdk.QbSdk
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.launch
 import top.yogiczy.mytv.core.data.entities.channel.ChannelGroupList
@@ -37,15 +45,17 @@ import top.yogiczy.mytv.tv.ui.screens.monitor.MonitorScreen
 import top.yogiczy.mytv.tv.ui.screens.quickop.QuickOpScreen
 import top.yogiczy.mytv.tv.ui.screens.settings.SettingsScreen
 import top.yogiczy.mytv.tv.ui.screens.settings.SettingsViewModel
-import top.yogiczy.mytv.tv.ui.screens.update.UpdateScreen
 import top.yogiczy.mytv.tv.ui.screens.videoplayer.VideoPlayerScreen
 import top.yogiczy.mytv.tv.ui.screens.videoplayer.rememberVideoPlayerState
 import top.yogiczy.mytv.tv.ui.screens.videoplayercontroller.VideoPlayerControllerScreen
 import top.yogiczy.mytv.tv.ui.screens.videoplayerdiaplaymode.VideoPlayerDisplayModeScreen
-import top.yogiczy.mytv.tv.ui.screens.webview.WebViewScreen
+import top.yogiczy.mytv.tv.ui.screens.webview.WebViewComponent
+import top.yogiczy.mytv.tv.ui.screens.webview.X5WebViewComponent
+import top.yogiczy.mytv.tv.ui.utils.Configs
 import top.yogiczy.mytv.tv.ui.utils.captureBackKey
 import top.yogiczy.mytv.tv.ui.utils.handleDragGestures
 import top.yogiczy.mytv.tv.ui.utils.handleKeyEvents
+
 
 @Composable
 fun MainContent(
@@ -57,7 +67,7 @@ fun MainContent(
     settingsViewModel: SettingsViewModel = viewModel(),
 ) {
     val coroutineScope = rememberCoroutineScope()
-
+    val focusRequester = remember { FocusRequester() }
     val videoPlayerState =
         rememberVideoPlayerState(defaultDisplayModeProvider = { settingsViewModel.videoPlayerDisplayMode })
     val mainContentState = rememberMainContentState(
@@ -140,8 +150,11 @@ fun MainContent(
             showMetadataProvider = { settingsViewModel.debugShowVideoPlayerMetadata },
         )
 
-        Visible({ ChannelUtil.isHybridWebViewUrl(mainContentState.currentChannel.urlList[mainContentState.currentChannelUrlIdx]) }) {
-            WebViewScreen(
+        Visible({Configs.sysWebViewMode && ChannelUtil.isHybridWebViewUrl(mainContentState.currentChannel.urlList[mainContentState.currentChannelUrlIdx]) }) {
+
+            QbSdk.forceSysWebView()
+            //WebViewScreen( WebViewComponentTest WebViewWithFullscreenVideo
+            WebViewComponent(
                 urlProvider = { mainContentState.currentChannel.urlList[mainContentState.currentChannelUrlIdx] },
                 onVideoResolutionChanged = { width, height ->
                     videoPlayerState.metadata = videoPlayerState.metadata.copy(
@@ -152,6 +165,91 @@ fun MainContent(
                 },
             )
         }
+        Visible({!Configs.sysWebViewMode && ChannelUtil.isHybridWebViewUrl(mainContentState.currentChannel.urlList[mainContentState.currentChannelUrlIdx]) }) {
+
+            QbSdk.unForceSysWebView()
+
+            //QbSdk.
+            mainContentState.isTempChannelScreenVisible = false
+            //X5WebViewScreen
+            X5WebViewComponent(
+                urlProvider = { mainContentState.currentChannel.urlList[mainContentState.currentChannelUrlIdx] },
+                onVideoResolutionChanged = { width, height ->
+                    videoPlayerState.metadata = videoPlayerState.metadata.copy(
+                        videoWidth = width,
+                        videoHeight = height,
+                    )
+                    mainContentState.isTempChannelScreenVisible = false
+                },
+            )
+        }
+        Box(
+            modifier = modifier
+                .fillMaxSize()
+                .alpha(0f)
+                .popupable()
+                .focusable(true)
+                .captureBackKey { onBackPressed() }
+                .handleKeyEvents(
+                    onUp = {
+                        if (settingsViewModel.iptvChannelChangeFlip) mainContentState.changeCurrentChannelToNext()
+                        else mainContentState.changeCurrentChannelToPrev()
+                    },
+                    onDown = {
+                        if (settingsViewModel.iptvChannelChangeFlip) mainContentState.changeCurrentChannelToPrev()
+                        else mainContentState.changeCurrentChannelToNext()
+                    },
+                    onLeft = {
+                        if (mainContentState.currentChannel.urlList.size > 1) {
+                            mainContentState.changeCurrentChannel(
+                                mainContentState.currentChannel,
+                                mainContentState.currentChannelUrlIdx - 1,
+                            )
+                        }
+                    },
+                    onRight = {
+                        if (mainContentState.currentChannel.urlList.size > 1) {
+                            mainContentState.changeCurrentChannel(
+                                mainContentState.currentChannel,
+                                mainContentState.currentChannelUrlIdx + 1,
+                            )
+                        }
+                    },
+                    onSelect = { mainContentState.isChannelScreenVisible = true },
+                    onLongSelect = { mainContentState.isQuickOpScreenVisible = true },
+                    onSettings = { mainContentState.isQuickOpScreenVisible = true },
+                    onLongLeft = { mainContentState.isEpgScreenVisible = true },
+                    onLongRight = { mainContentState.isChannelUrlScreenVisible = true },
+                    onLongDown = { mainContentState.isVideoPlayerControllerScreenVisible = true },
+                    onNumber = { channelNumberSelectState.input(it) },
+                )
+                .handleDragGestures(
+                    onSwipeDown = {
+                        if (settingsViewModel.iptvChannelChangeFlip) mainContentState.changeCurrentChannelToNext()
+                        else mainContentState.changeCurrentChannelToPrev()
+                    },
+                    onSwipeUp = {
+                        if (settingsViewModel.iptvChannelChangeFlip) mainContentState.changeCurrentChannelToPrev()
+                        else mainContentState.changeCurrentChannelToNext()
+                    },
+                    onSwipeRight = {
+                        if (mainContentState.currentChannel.urlList.size > 1) {
+                            mainContentState.changeCurrentChannel(
+                                mainContentState.currentChannel,
+                                mainContentState.currentChannelUrlIdx - 1,
+                            )
+                        }
+                    },
+                    onSwipeLeft = {
+                        if (mainContentState.currentChannel.urlList.size > 1) {
+                            mainContentState.changeCurrentChannel(
+                                mainContentState.currentChannel,
+                                mainContentState.currentChannelUrlIdx + 1,
+                            )
+                        }
+                    },
+                ),
+        ) {}
     }
 
     Visible({ settingsViewModel.uiShowEpgProgrammePermanentProgress }) {
@@ -445,7 +543,8 @@ fun MainContent(
         },
     )
 
-    UpdateScreen()
+    //top.yogiczy.mytv.tv.ui.screens.x5.UpdateScreen()
+    //top.yogiczy.mytv.tv.ui.screens.update.UpdateScreen()
 
     Visible({ settingsViewModel.debugShowFps }) { MonitorScreen() }
 }

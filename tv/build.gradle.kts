@@ -85,6 +85,8 @@ dependencies {
     implementation(libs.kotlinx.serialization)
     implementation(libs.kotlinx.collections.immutable)
     implementation(libs.androidx.material.icons.extended)
+    implementation(libs.androidx.material3.android)
+    implementation(libs.androidx.ui.android)
 
     // 播放器
     val mediaSettingsFile = file("../../media/core_settings.gradle")
@@ -116,4 +118,5 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
     coreLibraryDesugaring(libs.desugar.jdk.libs)
+    implementation(libs.tbs.tbssdk)
 }

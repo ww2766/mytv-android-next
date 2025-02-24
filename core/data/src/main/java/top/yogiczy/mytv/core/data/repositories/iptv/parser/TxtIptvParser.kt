@@ -16,9 +16,9 @@ class TxtIptvParser : IptvParser {
         return data.contains("#genre#")
     }
 
-    override suspend fun parse(data: String): ChannelGroupList = withContext(Dispatchers.Default) {
+    override suspend fun parse(data: String):  MutableList<IptvParser.IptvResponseItem> = withContext(Dispatchers.Default) {// ChannelGroupList = withContext(Dispatchers.Default) {
         val lines = data.split("\r\n", "\n")
-        val iptvList = mutableListOf<IptvResponseItem>()
+        val iptvList = mutableListOf<IptvParser.IptvResponseItem>()
 
         var groupName: String? = null
         lines.forEach { line ->
@@ -31,17 +31,18 @@ class TxtIptvParser : IptvParser {
                 if (res.size < 2) return@forEach
 
                 iptvList.addAll(res[1].split("#").map { url ->
-                    IptvResponseItem(
+                    IptvParser.IptvResponseItem(
                         name = res[0].trim(),
                         channelName = res[0].trim(),
                         groupName = groupName ?: "其他",
                         url = url.trim(),
+                        logo="https://live.fanmingming.com/tv/${res[0].trim()}.png",
                     )
                 })
             }
         }
-
-        return@withContext ChannelGroupList(iptvList.groupBy { it.groupName }.map { groupEntry ->
+        return@withContext  iptvList
+        /*return@withContext ChannelGroupList(iptvList.groupBy { it.groupName }.map { groupEntry ->
             ChannelGroup(
                 name = groupEntry.key,
                 channelList = ChannelList(groupEntry.value.groupBy { it.name }.map { nameEntry ->
@@ -53,13 +54,6 @@ class TxtIptvParser : IptvParser {
                     )
                 }),
             )
-        })
+        })*/
     }
-
-    private data class IptvResponseItem(
-        val name: String,
-        val channelName: String,
-        val groupName: String,
-        val url: String,
-    )
 }

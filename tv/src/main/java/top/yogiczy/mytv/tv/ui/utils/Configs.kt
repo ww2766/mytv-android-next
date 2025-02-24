@@ -127,9 +127,11 @@ object Configs {
         /** 更新通道 */
         UPDATE_CHANNEL,
 
+        /** 播放器 自定义ua*/
+        SYS_WEBVIEW_MODE,
         /** ==================== 播放器 ==================== */
-        /** 播放器 自定义ua */
-        VIDEO_PLAYER_USER_AGENT,
+        /** 播放器 自定义ua
+        VIDEO_PLAYER_USER_AGENT,*/
 
         /** 播放器 加载超时 */
         VIDEO_PLAYER_LOAD_TIMEOUT,
@@ -304,7 +306,7 @@ object Configs {
 
     /** 使用经典选台界面 */
     var uiUseClassicPanelScreen: Boolean
-        get() = SP.getBoolean(KEY.UI_USE_CLASSIC_PANEL_SCREEN.name, false)
+        get() = SP.getBoolean(KEY.UI_USE_CLASSIC_PANEL_SCREEN.name, true)
         set(value) = SP.putBoolean(KEY.UI_USE_CLASSIC_PANEL_SCREEN.name, value)
 
     /** 界面密度缩放比例 */
@@ -349,10 +351,8 @@ object Configs {
     /** ==================== 播放器 ==================== */
     /** 播放器 自定义ua */
     var videoPlayerUserAgent: String
-        get() = SP.getString(KEY.VIDEO_PLAYER_USER_AGENT.name, "").ifBlank {
-            Constants.VIDEO_PLAYER_USER_AGENT
-        }
-        set(value) = SP.putString(KEY.VIDEO_PLAYER_USER_AGENT.name, value)
+        get() {return SP.videoPlayerUserAgent}
+        set(value) {SP.videoPlayerUserAgent=value}
 
     /** 播放器 加载超时 */
     var videoPlayerLoadTimeout: Long
@@ -387,6 +387,26 @@ object Configs {
     var videoPlayerSkipMultipleFramesOnSameVSync: Boolean
         get() = SP.getBoolean(KEY.VIDEO_PLAYER_SKIP_MULTIPLE_FRAMES_ON_SAME_VSYNC.name, false)
         set(value) = SP.putBoolean(KEY.VIDEO_PLAYER_SKIP_MULTIPLE_FRAMES_ON_SAME_VSYNC.name, value)
+
+    /** 播放器 跳过同一VSync渲染多帧 */
+    var sysWebViewMode: Boolean
+        get() = SP.getBoolean(KEY.SYS_WEBVIEW_MODE.name, true)
+        set(value) = SP.putBoolean(KEY.SYS_WEBVIEW_MODE.name, value)
+
+    /** ==================== PROXY ==================== */
+    /** 代理 类型 */
+    var proxyType: SP.ProxyType
+        get() {return SP.proxyType}
+        set(value) {SP.proxyType=value}
+
+    /** 代理 URI */
+    var proxyUri: String
+        get() {return SP.proxyUri}
+        set(value) {SP.proxyUri=value}
+    /** 代理 域名列表 */
+    var proxySites:String
+        get() {return SP.proxySites}
+        set(value) {SP.proxySites=value}
 
     enum class UiTimeShowMode(val value: Int) {
         /** 隐藏 */

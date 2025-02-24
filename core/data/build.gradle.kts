@@ -43,6 +43,12 @@ dependencies {
 
     implementation(libs.okhttp)
     implementation(libs.kotlinx.serialization)
+    implementation(libs.androidx.media3.datasource.okhttp)
+    implementation(libs.androidx.media3.datasource)
+    implementation(libs.androidx.media3.common.ktx)
+    implementation(libs.androidx.webkit)
+    implementation(libs.webviewup.core)
+    implementation(libs.webviewup.download.source)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

@@ -13,7 +13,18 @@ class DefaultIptvParser : IptvParser {
     override fun isSupport(url: String, data: String): Boolean {
         return true
     }
-
+    override suspend fun parse(data: String): MutableList<IptvParser.IptvResponseItem> {
+        return mutableListOf<IptvParser.IptvResponseItem>(
+            IptvParser.IptvResponseItem(
+                groupName = "不支持当前直播源链接格式，请切换其他直播源链接；支持的直播源链接格式：m3u、tvbox",
+                channelName = "m3u",
+                name = "m3u",
+                url = "",
+                logo = ""
+            )
+        )
+    }
+/*
     override suspend fun parse(data: String): ChannelGroupList {
         return ChannelGroupList(
             listOf(
@@ -37,5 +48,5 @@ class DefaultIptvParser : IptvParser {
                 ),
             )
         )
-    }
+    }*/
 }

@@ -11,6 +11,8 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.tv.material3.Surface
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import top.yogiczy.mytv.tv.ui.App
 import top.yogiczy.mytv.tv.ui.theme.MyTVTheme
 import top.yogiczy.mytv.tv.utlis.HttpServer

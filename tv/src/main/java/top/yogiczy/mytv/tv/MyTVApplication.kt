@@ -6,7 +6,6 @@ import top.yogiczy.mytv.core.data.AppData
 class MyTVApplication : Application() {
     override fun onCreate() {
         super.onCreate()
-
         AppData.init(applicationContext)
         UnsafeTrustManager.enableUnsafeTrustManager()
     }

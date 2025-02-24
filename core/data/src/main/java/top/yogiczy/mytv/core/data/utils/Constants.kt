@@ -25,12 +25,12 @@ object Constants {
     val IPTV_SOURCE_LIST = IptvSourceList(
         listOf(
             IptvSource(
-                name = "默认直播源 fanmingming（IPV6）",
-                url = "https://live.fanmingming.com/tv/m3u/ipv6.m3u",
+                name = "默认直播源",
+                url = "proxy://https://b.tpy.us.kg/common",
             ),
             IptvSource(
-                name = "默认直播源 yuanzl77（IPV4/IPV6）",
-                url = "https://ghp.ci/https://raw.githubusercontent.com/yuanzl77/IPTV/main/live.m3u",
+                name = "默认直播源SH",
+                url = "http://read.dwqgbh.cloudns.org/a/sh.txt",
             ),
         )
     )

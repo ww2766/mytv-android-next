@@ -1,5 +1,6 @@
 package top.yogiczy.mytv.core.data.repositories.epg
 
+import android.net.Uri
 import android.util.Xml
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -14,8 +15,11 @@ import top.yogiczy.mytv.core.data.entities.epg.EpgProgramme
 import top.yogiczy.mytv.core.data.entities.epg.EpgProgrammeList
 import top.yogiczy.mytv.core.data.entities.epgsource.EpgSource
 import top.yogiczy.mytv.core.data.network.await
+import top.yogiczy.mytv.core.data.network.getProxyOkHttpClient
 import top.yogiczy.mytv.core.data.repositories.FileCacheRepository
 import top.yogiczy.mytv.core.data.repositories.epg.fetcher.EpgFetcher
+import top.yogiczy.mytv.core.data.utils.ChannelUtil
+import top.yogiczy.mytv.core.data.utils.Globals
 import top.yogiczy.mytv.core.data.utils.Logger
 import java.io.StringReader
 import java.text.SimpleDateFormat
@@ -27,10 +31,10 @@ import java.util.Locale
  */
 class EpgRepository(
     source: EpgSource,
-) : FileCacheRepository("epg-${source.url.hashCode().toUInt().toString(16)}.json") {
+)/* : FileCacheRepository("epg-${source.url.hashCode().toUInt().toString(16)}.json") */{
     private val log = Logger.create(javaClass.simpleName)
-    private val epgXmlRepository = EpgXmlRepository(source.url)
-
+    //private val epgXmlRepository = EpgXmlRepository(source.url)
+    private val xmlUrl  =source.url
     /**
      * 解析节目单xml
      */
@@ -92,10 +96,125 @@ class EpgRepository(
         log.i("解析节目单完成，共${epgMap.size}个频道，${epgMap.values.sumOf { it.programmeList.size }}个节目")
         return@withContext EpgList(epgMap.values.toList())
     }
+    suspend fun getEpgList(
+        filteredChannels: List<String> = emptyList(),
+        refreshTimeThreshold: Int,
+    ) = withContext(Dispatchers.Default) {
+
+        try {
+            if (Calendar.getInstance().get(Calendar.HOUR_OF_DAY) < refreshTimeThreshold) {
+                log.d("未到时间点，不刷新节目单")
+                return@withContext EpgList()
+            }
+            val gList = mutableListOf<Epg>()
+            val urlList=xmlUrl.replace(';','#').replace(',','#').replace('$','#').replace('\n','#').split('#')
+            urlList.forEach { item ->
+                val url=item.trim()
+                if(url.isEmpty())return@forEach
+                val fileCacheRepository=EpgXmlRepository("epg-${url.hashCode().toUInt().toString(16)}-${SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(System.currentTimeMillis())}")
+                val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+
+                val xmlJson = fileCacheRepository.getOrRefresh({ lastModified, _ ->
+                    dateFormat.format(System.currentTimeMillis()) != dateFormat.format(lastModified)
+                }) {
+                    val xmlString = fileCacheRepository.getEpgXml(xmlUrl)
+                    Json.encodeToString(parseFromXml(xmlString, filteredChannels.map { it.lowercase() }).value)
+                }
+
+
+            }
+            val epgFiles = Globals.cacheDir.listFiles { pathname ->
+                pathname.isFile && pathname.name.startsWith("epg-")
+            }
+
+            epgFiles?.forEach { file ->
+                if(System.currentTimeMillis() - file.lastModified()>7*24*3600*1000)
+                {
+                    try {
+                        file.delete()
+                    } catch (ex: Exception) {
+                        ex.printStackTrace()
+                    }
+                    return@forEach
+                }
+                println(file.absolutePath)
+                val fileCacheRepository=EpgXmlRepository(file.name)
+                val xmlJson = fileCacheRepository.getCacheData()
+                try {
+                    xmlJson?.let { Json.decodeFromString<List<Epg>>(it) }?.let { gList.addAll(it) }
+                }catch (_: Exception){}
+            }
+            val groupedItems = gList.groupBy { e->e.channel }
+                .flatMap { (_, itemsInCategory) -> // 使用 flatMap 展开
+                    val combinedValues = itemsInCategory.flatMap {ie-> ie.programmeList }.distinctBy() { p->p.startAt  }
+                    itemsInCategory.map { originalItem -> // 为每个原始 Item 创建新 Item
+                        Epg(originalItem.channel, EpgProgrammeList(combinedValues))
+                    }
+                }
+            EpgList(groupedItems)
+        } catch (ex: Exception) {
+            log.e("获取节目单失败", ex)
+            throw Exception(ex)
+        }
+    }
+    fun clearCache() {
+
+        val epgFiles = Globals.cacheDir.listFiles { pathname ->
+            pathname.isFile && pathname.name.startsWith("epg-")
+        }
+
+        epgFiles?.forEach { file ->
+            println(file.absolutePath)
+            try {
+                file.delete()
+            } catch (ex: Exception) {
+                ex.printStackTrace()
+            }
+        }
+    }
+}
+
+/**
+ * 节目单xml获取
+ */
+private class EpgXmlRepository(fileName:String) : FileCacheRepository(fileName) {
+    private val log = Logger.create(javaClass.simpleName)
 
     /**
-     * 获取节目单列表
+     * 获取远程xml
      */
+    private suspend fun fetchXml(url: String): String = withContext(Dispatchers.IO) {
+        log.d("获取远程节目单xml: $url")
+
+        val client = getProxyOkHttpClient(url)
+        val request = Request.Builder().url(ChannelUtil.clearAllPrefixFromUrl(url)).build()
+
+        try {
+            with(client.newCall(request).execute()) {
+                if (!isSuccessful) {
+                    throw Exception("获取远程节目单xml失败: $code")
+                }
+
+                val fetcher = EpgFetcher.instances.first { it.isSupport(url) }
+
+                return@with fetcher.fetch(this)
+            }
+        } catch (ex: Exception) {
+            throw Exception("获取远程节目单xml失败，请检查网络连接", ex)
+        }
+    }
+
+    /**
+     * 获取xml
+     */
+    suspend fun getEpgXml(url: String): String {
+        return getOrRefresh(0) {
+            fetchXml(url)
+        }
+    }
+    /**
+     * 获取节目单列表
+
     suspend fun getEpgList(
         filteredChannels: List<String> = emptyList(),
         refreshTimeThreshold: Int,
@@ -167,5 +286,5 @@ private class EpgXmlRepository(
         return getOrRefresh(0) {
             fetchXml()
         }
-    }
+    }*/
 }

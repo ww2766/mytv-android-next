@@ -63,6 +63,10 @@ object HttpServer : Loggable() {
                     handleIptvSourcePush(request, response)
                 }
 
+                server.post("/api/proxy/push") { request, response ->
+                    handleProxyPush(request, response)
+                }
+
                 server.post("/api/epg-source/push") { request, response ->
                     handleEpgSourcePush(request, response)
                 }
@@ -82,7 +86,67 @@ object HttpServer : Loggable() {
                 server.post("/api/upload/apk") { request, response ->
                     handleUploadApk(request, response, context)
                 }
+                server.get("/upgradeWebView") { request, response ->
+                    //checkWebViewRunState()
+                    log.i("upgradeWebView已启动 ")
 
+                    //upgradeWebView(context)
+                    wrapResponse(response).apply {
+                        setContentType("text/html")
+                        send("upgradeWebView...")
+                    }
+                    log.i("upgradeWebView已完成 ")
+                }
+                server.get("/channel") { request, response ->
+                    log.i("channel: ${request.query["id"]?.get(0)}")
+                    var ret=""
+                    if ("youtube" == request.query["site"]?.get(0)){
+                        ret="""  
+                            <!DOCTYPE html>
+                            <html>
+                            <head>
+                                <style>
+                                    html, body {
+                                        width: 100%;
+                                        height: 100%;
+                                        margin: 0;
+                                        padding: 0;
+                                        overflow: hidden;
+                                    }
+                                    iframe {
+                                        position: absolute;
+                                        top: 0;
+                                        left: 0;
+                                        width: 100%;
+                                        height: 100%;
+                                        border: none;
+                                    }
+                                </style>
+                            </head>
+                            <body>
+                            <iframe   
+                              frameborder="0"
+                              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share;"
+                              allowfullscreen="true"
+                              allow="fullscreen"
+                              src="https://www.youtube.com/embed/${request.query["id"]?.get(0)}?autoplay=1&playsinline=0&fs=1&rel=0"
+                              > 
+                              </iframe>   
+                              <script>
+                                    try{
+                                        Android.changeVideoResolution(1280 ,720)
+                                     }catch(e){}
+                              </script>  
+                              </body>
+                                </html>
+                               """
+                    }
+                    wrapResponse(response).apply {
+                        setContentType("text/html")
+                        send(ret)
+                    }
+                    log.i("channel: ${request.path}${request.url}")
+                }
                 log.i("设置服务已启动: $serverUrl")
             } catch (ex: Exception) {
                 log.e("设置服务启动失败: ${ex.message}", ex)
@@ -163,7 +227,23 @@ object HttpServer : Loggable() {
 
         wrapResponse(response).send("success")
     }
+    private fun handleProxyPush(
+        request: AsyncHttpServerRequest,
+        response: AsyncHttpServerResponse,
+    ) {
+        val body = request.getBody<JSONObjectBody>().get()
+        val proxyUri = body.get("proxyUri").toString()
+        val proxySites = body.get("proxySites").toString()
+        if(!Regex("^(https?|socks[45]?)://(?:\\S+:\\S+@)?[\\w.-]+(:\\d+)?$").matches(proxyUri))
+        {
+            wrapResponse(response).send("fail:proxy url error")
+        }
 
+        Configs.proxyUri = proxyUri
+        Configs.proxySites = proxySites
+
+        wrapResponse(response).send("success")
+    }
     private fun handleEpgSourcePush(
         request: AsyncHttpServerRequest,
         response: AsyncHttpServerResponse,
@@ -237,6 +317,8 @@ object HttpServer : Loggable() {
                         videoPlayerUserAgent = Configs.videoPlayerUserAgent,
                         videoPlayerLoadTimeout = Configs.videoPlayerLoadTimeout,
                         videoPlayerDisplayMode = Configs.videoPlayerDisplayMode,
+                        proxyUri = Configs.proxyUri,
+                        proxySites = Configs.proxySites,
                     )
                 )
             )
@@ -289,6 +371,8 @@ object HttpServer : Loggable() {
         Configs.videoPlayerUserAgent = configs.videoPlayerUserAgent
         Configs.videoPlayerLoadTimeout = configs.videoPlayerLoadTimeout
         Configs.videoPlayerDisplayMode = configs.videoPlayerDisplayMode
+        Configs.proxyUri = configs.proxyUri
+        Configs.proxySites = configs.proxySites
 
         wrapResponse(response).send("success")
     }
@@ -404,4 +488,6 @@ private data class AllSettings(
     val videoPlayerUserAgent: String = "",
     val videoPlayerLoadTimeout: Long = 0,
     val videoPlayerDisplayMode: VideoPlayerDisplayMode = VideoPlayerDisplayMode.ORIGINAL,
+    val proxyUri: String,
+    val proxySites: String,
 )

@@ -1,5 +1,6 @@
 package top.yogiczy.mytv.tv.ui.screens.main.components
 
+import android.annotation.SuppressLint
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
@@ -28,6 +29,7 @@ import top.yogiczy.mytv.tv.ui.screens.videoplayer.VideoPlayerState
 import top.yogiczy.mytv.tv.ui.screens.videoplayer.rememberVideoPlayerState
 import java.net.URI
 import java.text.SimpleDateFormat
+import java.util.Date
 import java.util.Locale
 import kotlin.math.max
 import kotlin.math.min
@@ -235,15 +237,35 @@ class MainContentState(
 
         var url = _currentChannel.urlList[_currentChannelUrlIdx]
         if (_currentPlaybackEpgProgramme != null) {
-            val timeFormat = SimpleDateFormat("yyyyMMddHHmmss", Locale.getDefault())
-            val query = listOf(
-                "playseek=",
-                timeFormat.format(_currentPlaybackEpgProgramme!!.startAt),
-                "-",
-                timeFormat.format(_currentPlaybackEpgProgramme!!.endAt),
-            ).joinToString("")
-            url = if (URI(url).query.isNullOrBlank()) "$url?$query" else "$url&$query"
-            url = ChannelUtil.urlToCanPlayback(url)
+            if(url.contains('<')){
+                //直播返回正常url
+                //http://ottrrs.hl.chinamobile.com/TVOD/88888888/224/3221226016/index.m3u8<?playseek={yyyyMMddHHmmss}-{yyyyMMddHHmmss}>
+
+                val tmp=url.replace("<","").replace(">","")
+                val tmpL=tmp.split("{")
+                val tmpL1=tmpL.getOrElse(1){""}.split("}")
+                val tmpL2=tmpL.getOrElse(2){""}.split("}")
+                var ret=tmpL.getOrElse(0){""}
+                ret+= _currentPlaybackEpgProgramme?.let { formatProgrammeDateTimeString(it.startAt,tmpL1.getOrElse(0){""}) }
+                ret+=tmpL1.getOrElse(1){""}
+                ret+= _currentPlaybackEpgProgramme?.let { formatProgrammeDateTimeString(it.endAt,tmpL2.getOrElse(0){""}) }
+                ret+=tmpL2.getOrElse(1){""}
+                url=ret
+            }else {
+                val timeFormat = SimpleDateFormat("yyyyMMddHHmmss", Locale.getDefault())
+                val query = listOf(
+                    "playseek=",
+                    timeFormat.format(_currentPlaybackEpgProgramme!!.startAt),
+                    "-",
+                    timeFormat.format(_currentPlaybackEpgProgramme!!.endAt),
+                ).joinToString("")
+                url = if (URI(url).query.isNullOrBlank()) "$url?$query" else "$url&$query"
+                url = ChannelUtil.urlToCanPlayback(url)
+            }
+        }else{
+            if(url.contains('<')) {
+                url = url.split('<').getOrElse(0) { url }
+            }
         }
 
         log.d("播放${_currentChannel.name}（${_currentChannelUrlIdx + 1}/${_currentChannel.urlList.size}）: $url")
@@ -254,7 +276,19 @@ class MainContentState(
             videoPlayerState.prepare(url)
         }
     }
+    @SuppressLint("SimpleDateFormat")
+    fun formatProgrammeDateTimeString(timestamp:Long, pattern:String):String{
+        if(pattern.isEmpty()){
+            return  (timestamp/1000).toString()
+        }
+        // 将时间戳转换为Date对象
+        val date = Date(timestamp)
 
+        // 定义日期时间格式
+        val dateFormat = SimpleDateFormat(pattern, Locale.getDefault())
+        // 格式化Date对象为字符串
+        return dateFormat.format(date)
+    }
     fun changeCurrentChannelToPrev() {
         changeCurrentChannel(getPrevChannel())
     }

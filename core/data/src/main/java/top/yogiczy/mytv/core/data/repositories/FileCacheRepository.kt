@@ -8,14 +8,14 @@ import java.io.File
 /**
  * 用于将数据缓存至本地
  */
-abstract class FileCacheRepository(
+open class FileCacheRepository(
     private val fileName: String,
     private val isFullPath: Boolean = false,
 ) {
     private fun getCacheFile() =
         if (isFullPath) File(fileName) else File(Globals.cacheDir, fileName)
 
-    private suspend fun getCacheData(): String? = withContext(Dispatchers.IO) {
+    suspend fun getCacheData(): String? = withContext(Dispatchers.IO) {
         val file = getCacheFile()
         if (file.exists()) file.readText()
         else null
@@ -26,14 +26,14 @@ abstract class FileCacheRepository(
         file.writeText(data)
     }
 
-    protected suspend fun getOrRefresh(cacheTime: Long, refreshOp: suspend () -> String): String {
+    suspend fun getOrRefresh(cacheTime: Long, refreshOp: suspend () -> String): String {
         return getOrRefresh(
             { lastModified, _ -> System.currentTimeMillis() - lastModified >= cacheTime },
             refreshOp,
         )
     }
 
-    protected suspend fun getOrRefresh(
+    /*suspend fun getOrRefresh(
         isExpired: (lastModified: Long, cacheData: String?) -> Boolean,
         refreshOp: suspend () -> String,
     ): String {
@@ -49,6 +49,27 @@ abstract class FileCacheRepository(
         }
 
         return data
+    }*/
+    suspend fun getOrRefresh(
+        isExpired: (lastModified: Long, cacheData: String?) -> Boolean,
+        refreshOp: suspend () -> String,
+    ): String {
+        val oldData = getCacheData()
+
+        if (!oldData.isNullOrBlank()&&!isExpired(getCacheFile().lastModified(), oldData)) {
+            return oldData
+        }else{
+            val newData = refreshOp()
+            if (newData.isNotBlank()) {
+                setCacheData(newData)
+                return newData
+            }
+        }
+        if (!oldData.isNullOrBlank())
+        {
+            return oldData
+        }
+        return ""
     }
 
     open suspend fun clearCache() {

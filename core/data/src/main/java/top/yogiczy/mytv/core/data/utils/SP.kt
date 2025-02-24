@@ -47,4 +47,58 @@ object SP {
     fun putBoolean(key: String, value: Boolean) = sp.edit().putBoolean(key, value).apply()
 
     fun clear() = sp.edit().clear().apply()
+    enum class KEY {
+        /** ==================== 播放器 ==================== */
+        /** 播放器 自定义ua */
+        VIDEO_PLAYER_USER_AGENT,
+        /** ==================== proxy ==================== */
+        /** 代理 类型 direct 0 全局 1 限定域名 2 */
+        PROXY_TYPE,
+
+        /** 代理 IP 域名*/
+        PROXY_URI,
+
+        /** 代理 域名集合*/
+        PROXY_SITES
+    }
+    enum class ProxyType(val value: Int) {
+        /** 直通  不使用代理 */
+        NO(0),
+
+        /** 代理所有网络连接 */
+        ALL(1),
+
+        /** 代理指定域名的网络连接 */
+        LIMIT(2);
+
+        companion object {
+            fun fromValue(value: Int): ProxyType {
+                return entries.firstOrNull { it.value == value } ?: LIMIT
+            }
+        }
+    }
+    /** ==================== 播放器 ==================== */
+    /** 播放器 自定义ua */
+    var videoPlayerUserAgent: String
+        get() = SP.getString(KEY.VIDEO_PLAYER_USER_AGENT.name, "").ifBlank {
+            Constants.VIDEO_PLAYER_USER_AGENT
+        }
+        set(value) = SP.putString(KEY.VIDEO_PLAYER_USER_AGENT.name, value)
+    /** ==================== PROXY ==================== */
+    /** 代理 类型 */
+    var proxyType: SP.ProxyType
+        get() =SP.ProxyType.fromValue(
+            SP.getInt(SP.KEY.PROXY_TYPE.name, SP.ProxyType.NO.value)
+        )
+        set(value) = SP.putInt(SP.KEY.PROXY_TYPE.name, value.value)
+
+    /** 代理 URI */
+    var proxyUri: String
+        get() = SP.getString(SP.KEY.PROXY_URI.name, "")
+        set(value) = SP.putString(SP.KEY.PROXY_URI.name, value)
+
+    /** 代理 域名列表 */
+    var proxySites: String
+        get() = SP.getString(SP.KEY.PROXY_SITES.name, "")
+        set(value) = SP.putString(SP.KEY.PROXY_SITES.name, value)
 }

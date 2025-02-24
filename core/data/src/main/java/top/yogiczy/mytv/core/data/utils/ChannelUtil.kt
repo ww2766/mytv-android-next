@@ -311,16 +311,32 @@ object ChannelUtil {
             ?: name
     }
 
-    const val HYBRID_WEB_VIEW_URL_PREFIX = "hybrid-webview://"
+    const val HYBRID_WEB_VIEW_URL_PREFIX = "webview://"
+    private const val PROXY_WEB_VIEW_URL_PREFIX = "proxy://"
 
     fun getHybridWebViewUrl(channelName: String): List<String>? {
         return hybridWebViewUrl[standardChannelName(channelName)]?.map { "${HYBRID_WEB_VIEW_URL_PREFIX}${it}" }
     }
 
     fun isHybridWebViewUrl(url: String): Boolean {
-        return url.startsWith(HYBRID_WEB_VIEW_URL_PREFIX)
+        //return url.startsWith(HYBRID_WEB_VIEW_URL_PREFIX)
+        return url.contains(HYBRID_WEB_VIEW_URL_PREFIX,true)
     }
 
+    fun isProxyWebViewUrl(url: String): Boolean {
+        return url.contains(PROXY_WEB_VIEW_URL_PREFIX,true)
+    }
+
+    fun clearProxyPrefixFromUrl(url: String): String {
+        return url.replace(PROXY_WEB_VIEW_URL_PREFIX,"",true)
+    }
+
+    fun clearHybridPrefixFromUrl(url: String): String {
+        return url.replace(HYBRID_WEB_VIEW_URL_PREFIX,"",true)
+    }
+    fun clearAllPrefixFromUrl(url: String): String {
+        return clearProxyPrefixFromUrl(clearHybridPrefixFromUrl(url))
+    }
     fun getHybridWebViewUrlProvider(url: String): String {
         return if (url.contains("https://tv.cctv.com")) "央视网"
         else if (url.contains("https://yangshipin.cn")) "央视频"
@@ -328,7 +344,7 @@ object ChannelUtil {
     }
 
     fun urlSupportPlayback(url: String): Boolean {
-        return listOf("pltv", "PLTV", "tvod", "TVOD").any { url.contains(it) }
+        return listOf("pltv", "PLTV", "tvod", "TVOD","<").any { url.contains(it) }
     }
 
     fun urlToCanPlayback(url: String): String {

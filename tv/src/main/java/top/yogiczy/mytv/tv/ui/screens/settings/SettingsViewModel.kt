@@ -12,6 +12,7 @@ import top.yogiczy.mytv.core.data.entities.epgsource.EpgSource
 import top.yogiczy.mytv.core.data.entities.epgsource.EpgSourceList
 import top.yogiczy.mytv.core.data.entities.iptvsource.IptvSource
 import top.yogiczy.mytv.core.data.entities.iptvsource.IptvSourceList
+import top.yogiczy.mytv.core.data.utils.SP
 import top.yogiczy.mytv.tv.ui.screens.videoplayer.VideoPlayerDisplayMode
 import top.yogiczy.mytv.tv.ui.utils.Configs
 
@@ -351,6 +352,20 @@ class SettingsViewModel : ViewModel() {
             _videoPlayerSkipMultipleFramesOnSameVSync = value
             Configs.videoPlayerSkipMultipleFramesOnSameVSync = value
         }
+    private var _proxyType by mutableStateOf(Configs.proxyType)
+    var proxyType: SP.ProxyType
+        get() = _proxyType
+        set(value) {
+            _proxyType = value
+            Configs.proxyType = value
+        }
+    private var _sysWebViewMode by mutableStateOf(false)
+    var sysWebViewMode: Boolean
+        get() = _sysWebViewMode
+        set(value) {
+            _sysWebViewMode = value
+            Configs.sysWebViewMode = value
+        }
 
     init {
         // 删除过期的预约
@@ -403,5 +418,6 @@ class SettingsViewModel : ViewModel() {
         _videoPlayerForceAudioSoftDecode = Configs.videoPlayerForceAudioSoftDecode
         _videoPlayerRenderMode = Configs.videoPlayerRenderMode
         _videoPlayerSkipMultipleFramesOnSameVSync = Configs.videoPlayerSkipMultipleFramesOnSameVSync
+        _sysWebViewMode=Configs.sysWebViewMode
     }
 }

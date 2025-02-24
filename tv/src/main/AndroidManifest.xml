@@ -17,6 +17,8 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission
         android:name="android.permission.MANAGE_EXTERNAL_STORAGE"
         tools:ignore="ScopedStorage" />
@@ -34,12 +36,14 @@
         android:theme="@style/Theme.MyTV"
         android:usesCleartextTraffic="true"
         tools:ignore="DiscouragedApi"
+        android:hardwareAccelerated="true"
         tools:targetApi="n">
         <activity
             android:name=".MainActivity"
             android:configChanges="screenSize|smallestScreenSize|screenLayout|orientation|screenLayout|keyboardHidden"
             android:exported="true"
             android:resizeableActivity="true"
+            android:hardwareAccelerated="true"
             android:screenOrientation="sensorLandscape"
             android:supportsPictureInPicture="true">
             <intent-filter>
@@ -49,7 +53,6 @@
                 <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
             </intent-filter>
         </activity>
-
         <receiver
             android:name=".BootReceiver"
             android:enabled="true"
@@ -60,7 +63,11 @@
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </receiver>
-
+        <service
+            android:name="com.tencent.smtt.export.external.DexClassLoaderProviderService"
+            android:label="dexopt"
+            android:process=":dexopt" >
+        </service>
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.FileProvider"

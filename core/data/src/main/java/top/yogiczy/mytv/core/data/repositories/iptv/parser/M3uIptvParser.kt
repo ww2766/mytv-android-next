@@ -16,9 +16,9 @@ class M3uIptvParser : IptvParser {
         return data.startsWith("#EXTM3U")
     }
 
-    override suspend fun parse(data: String): ChannelGroupList = withContext(Dispatchers.Default) {
+    override suspend fun parse(data: String): MutableList<IptvParser.IptvResponseItem> = withContext(Dispatchers.Default) {// ChannelGroupList = withContext(Dispatchers.Default) {
         val lines = data.split("\r\n", "\n")
-        val iptvList = mutableListOf<IptvResponseItem>()
+        val iptvList = mutableListOf<IptvParser.IptvResponseItem>()
 
         lines.forEachIndexed { index, line ->
             if (!line.startsWith("#EXTINF")) return@forEachIndexed
@@ -33,7 +33,7 @@ class M3uIptvParser : IptvParser {
 
             url?.let {
                 iptvList.add(
-                    IptvResponseItem(
+                    IptvParser.IptvResponseItem(
                         name = name,
                         channelName = channelName,
                         groupName = groupName,
@@ -43,8 +43,8 @@ class M3uIptvParser : IptvParser {
                 )
             }
         }
-
-        return@withContext ChannelGroupList(iptvList.groupBy { it.groupName }.map { groupEntry ->
+        return@withContext  iptvList
+        /*return@withContext ChannelGroupList(iptvList.groupBy { it.groupName }.map { groupEntry ->
             ChannelGroup(
                 name = groupEntry.key,
                 channelList = ChannelList(groupEntry.value.groupBy { it.name }.map { nameEntry ->
@@ -56,14 +56,8 @@ class M3uIptvParser : IptvParser {
                     )
                 })
             )
-        })
+        })*/
     }
 
-    private data class IptvResponseItem(
-        val name: String,
-        val channelName: String,
-        val groupName: String,
-        val url: String,
-        val logo: String?,
-    )
+
 }

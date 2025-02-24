@@ -3,213 +3,63 @@ package top.yogiczy.mytv.tv.ui.screens.webview
 import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.Color
 import android.os.SystemClock
-import android.util.Log
+import android.util.AttributeSet
 import android.view.KeyEvent
-import android.view.MotionEvent
 import android.view.View
-import android.view.ViewGroup
-import android.webkit.ConsoleMessage
 import android.webkit.JavascriptInterface
-import android.webkit.WebChromeClient
-import android.webkit.WebSettings
-import android.webkit.WebView
-import android.webkit.WebViewClient
 import android.widget.FrameLayout
-import androidx.compose.foundation.background
-import androidx.compose.foundation.focusable
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.currentCompositionLocalContext
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.viewinterop.AndroidView
-import androidx.tv.material3.MaterialTheme
-import androidx.tv.material3.Text
-import top.yogiczy.mytv.core.data.network.WebViewUtils.updateWebViewProxy
-import top.yogiczy.mytv.core.data.utils.ChannelUtil
-import top.yogiczy.mytv.tv.ui.material.Visible
-import top.yogiczy.mytv.tv.ui.screens.webview.components.WebViewPlaceholder
+import androidx.activity.ComponentActivity
+import androidx.compose.foundation.interaction.FocusInteraction
+import com.tencent.smtt.export.external.extension.proxy.ProxyWebChromeClientExtension
+import com.tencent.smtt.export.external.extension.proxy.ProxyWebViewClientExtension
+import com.tencent.smtt.export.external.interfaces.ConsoleMessage
+import com.tencent.smtt.export.external.interfaces.IX5WebChromeClient
+import com.tencent.smtt.export.external.interfaces.JsResult
+import com.tencent.smtt.sdk.WebChromeClient
+import com.tencent.smtt.sdk.WebSettings
+import com.tencent.smtt.sdk.WebView
+import com.tencent.smtt.sdk.WebViewClient
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import top.yogiczy.mytv.core.data.entities.git.GitRelease
+import top.yogiczy.mytv.core.data.utils.Logger
 import java.lang.Thread.sleep
+import kotlin.system.measureTimeMillis
 
+
+typealias LP = FrameLayout.LayoutParams
+
+@Suppress("unused", "DEPRECATION")
 @SuppressLint("SetJavaScriptEnabled")
-@Composable
-fun WebViewScreen(
-    modifier: Modifier = Modifier,
-    urlProvider: () -> String = { "${ChannelUtil.HYBRID_WEB_VIEW_URL_PREFIX}https://tv.cctv.com/live/index.shtml" },
-    onVideoResolutionChanged: (width: Int, height: Int) -> Unit = { _, _ -> },
-) {
-    //val url = urlProvider().replace(ChannelUtil.HYBRID_WEB_VIEW_URL_PREFIX, "",true)
-    val url = ChannelUtil.clearHybridPrefixFromUrl(urlProvider())
-    var urlR by remember { mutableStateOf(url) }
-    var placeholderVisible by remember { mutableStateOf(true) }
-    var fullScreenView: View? = null
-    var fullScreenViewR by remember { mutableStateOf(fullScreenView) }
-    var isVideoFullScreen by remember { mutableStateOf(false) }
-    var customViewCallback: WebChromeClient.CustomViewCallback? = null
-    var customViewCallbackR  by remember { mutableStateOf(customViewCallback) }
-    LocalContext.current.assets.open("auto_play_full_video.js").reader().readText()
+class X5WebView @JvmOverloads constructor(
+    context: Context, attrs: AttributeSet? = null,
+    defStyleAttr: Int = 0,
+    val onVideoResolutionChanged: (width: Int, height: Int) -> Unit = { _, _ -> },
+    val releaseFocus: ()->Unit={},
+) : WebView(context, attrs, defStyleAttr) {
+    val log= Logger.create("X5WebView")
 
-        Box(modifier = modifier.fillMaxSize()) {
-            AndroidView(
-                modifier = Modifier
-                    .align(Alignment.Center)
-                    .fillMaxHeight()
-                    .background(Color.Black),
-                factory = {
-                    MyWebView(it).apply {
-                        webViewClient = MyClient(
-                            onPageStarted = { placeholderVisible = true },
-                            onPageFinished = { placeholderVisible = false },
-                        )
-                        webChromeClient = object : WebChromeClient() {
+    private val client = object : WebViewClient() {
 
-
-                            override fun onShowCustomView(
-                                view: View?,
-                                callback: CustomViewCallback?
-                            ) {
-                                if (fullScreenViewR != null) {
-                                    onHideCustomView()
-                                    return
-                                }
-                                super.onShowCustomView(view, callback)
-                                if (view is FrameLayout) {
-                                    fullScreenViewR = view
-                                    customViewCallbackR = callback
-                                    isVideoFullScreen = true
-                                }
-
-                            }
-
-                            override fun onHideCustomView() {
-                                super.onHideCustomView()
-                                if (fullScreenView != null) {
-                                    fullScreenViewR = null
-                                    customViewCallbackR?.onCustomViewHidden()
-                                    isVideoFullScreen = false
-                                }
-                            }
-
-                            override fun onConsoleMessage(msg: ConsoleMessage): Boolean {
-                                when (msg.messageLevel()) {
-                                    ConsoleMessage.MessageLevel.DEBUG, null -> Log.i(
-                                        "",
-                                        msg.message()
-                                    )
-
-                                    ConsoleMessage.MessageLevel.LOG, ConsoleMessage.MessageLevel.TIP -> Log.i(
-                                        "",
-                                        msg.message()
-                                    )
-
-                                    ConsoleMessage.MessageLevel.WARNING -> Log.i("", msg.message())
-                                    ConsoleMessage.MessageLevel.ERROR -> Log.i("", msg.message())
-                                }
-                                return true
-                            }
-                        }
-                        setBackgroundColor(Color.Black.toArgb())
-                        layoutParams = ViewGroup.LayoutParams(
-                            ViewGroup.LayoutParams.MATCH_PARENT,
-                            ViewGroup.LayoutParams.MATCH_PARENT,
-                        )
-
-                        settings.javaScriptEnabled = true
-                        settings.useWideViewPort = true
-                        settings.loadWithOverviewMode = true
-                        settings.domStorageEnabled = true
-                        settings.databaseEnabled = true
-                        settings.cacheMode = WebSettings.LOAD_CACHE_ELSE_NETWORK
-                        settings.loadsImagesAutomatically = true
-                        settings.blockNetworkImage = false
-                        settings.userAgentString =
-                            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36 Edg/126.0.0.0"
-                        settings.cacheMode = WebSettings.LOAD_DEFAULT
-                        settings.javaScriptCanOpenWindowsAutomatically = true
-                        settings.setSupportZoom(false)
-                        settings.displayZoomControls = false
-                        settings.builtInZoomControls = false
-                        settings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
-                        settings.mediaPlaybackRequiresUserGesture = false
-
-                        isHorizontalScrollBarEnabled = false
-                        isVerticalScrollBarEnabled = false
-                        isClickable = false
-                        isFocusable = false
-                        isFocusableInTouchMode = false
-
-                        addJavascriptInterface(
-                            MyWebViewInterface(
-                                onVideoResolutionChanged = onVideoResolutionChanged,
-                                this,
-                            ), "AndroidBridge"
-                        )
-                    }
-
-                },
-                update = {
-                    //isVideoFullScreen = false
-                    //customViewCallbackR?.onCustomViewHidden()
-                    //fullScreenViewR = null
-                    updateWebViewProxy(
-                        it.context,
-                        url
-                    );
-                    it.loadUrl(ChannelUtil.clearAllPrefixFromUrl(url));
-                },
-            )
+        override fun onPageStarted(view: WebView, url: String, favicon: Bitmap?) {
+            super.onPageStarted(view, url, favicon)
+            log.i( "onPageStarted, $url")
         }
-        if (isVideoFullScreen) {
 
-            Box(modifier = modifier.fillMaxSize()) {
-                AndroidView(
-                    modifier = Modifier
-                        .align(Alignment.Center)
-                        .fillMaxHeight()
-                        .background(Color.Black),
-                    factory = {
-                        fullScreenViewR?.apply {
-                            layoutParams = ViewGroup.LayoutParams(
-                                ViewGroup.LayoutParams.MATCH_PARENT,
-                                ViewGroup.LayoutParams.MATCH_PARENT,
-                            )
-
-                            isClickable = false
-                            isFocusable = false
-                            isFocusableInTouchMode = false
-                        }!!
-                    })
+        override fun onPageFinished(view: WebView, url: String) {
+            if (url == URL_BLANK)
+            {
+                super.onPageFinished(view, url)
+                isOpenBlankIng=false
+                return
             }
-        }
-        Visible({ placeholderVisible }) { WebViewPlaceholder() }
-}
-
-
-class MyClient(
-    private val onPageStarted: () -> Unit,
-    private val onPageFinished: () -> Unit,
-) : WebViewClient() {
-
-    override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
-        onPageStarted()
-        super.onPageStarted(view, url, favicon)
-    }
-
-    override fun onPageFinished(view: WebView, url: String) {
-        view.evaluateJavascript(
-            """
-            
+            view.evaluateJavascript(
+                """
+  
                                 console.log('Plugin enter.');
                                 ;(async () => {
                                     console.log('Plugin enter.');
@@ -337,10 +187,9 @@ class MyClient(
                                     }
                         
                                     // 网页内全屏
-                                    function enterInlineFullscreen(video) {
-                                      setVideoResolution(video);
+                                    function enterInlineFullscreen1(video) {
                                       if(userInteracted===false){
-                                        //clickKeyCodeF(); 
+                                        clickKeyCodeF(); 
                                         return;
                                       } 
                                       if (video.requestFullscreen) {
@@ -362,7 +211,7 @@ class MyClient(
                                     }
                         
                                     // 网页内全屏
-                                    function enterInlineFullscreen1(video) {
+                                    function enterInlineFullscreen(video) {
                                       
                                       setVideoResolution(video);
                                       if(userInteracted===false){
@@ -390,7 +239,6 @@ class MyClient(
                                       video.volume =1
                                       video.play();
                                       userInteracted = false; // 重置用户交互标志
-                                      console.log('Entered inline fullscreen mode.');
                                     }
                                     // 检测并监听视频元素
                                     function detectAndListenVideo() {
@@ -484,34 +332,128 @@ class MyClient(
                                     console.warn('完成监听页面加载事件');
                                   })() 
         """.trimIndent()
-        ) {
-            onPageFinished()
+            ) {
+                //onPageFinished(view, url)
+            }
+            super.onPageFinished(view, url)
+            log.i( "onPageFinished, $url")
         }
     }
-}
 
-class MyWebView(context: Context) : WebView(context) {
-    @SuppressLint("ClickableViewAccessibility")
-    override fun onTouchEvent(event: MotionEvent?): Boolean {
-        return false
+    private val clientExtension = object : ProxyWebViewClientExtension() {
+
     }
-}
+    private var fullscreenView: View? = null
+    //var isFullscreen by remember { mutableStateOf(false) }
+    private val chromeClient = object : WebChromeClient() {
 
-class MyWebViewInterface(
-    private val onVideoResolutionChanged: (width: Int, height: Int) -> Unit = { _, _ -> },
-    private val webView: WebView,
-) {
+        private var callback: IX5WebChromeClient.CustomViewCallback? = null
+
+        override fun onJsAlert(view: WebView, url: String, message: String?, result: JsResult): Boolean {
+            result.cancel()
+            return true
+        }
+
+        override fun onConsoleMessage(msg: ConsoleMessage): Boolean {
+            when (msg.messageLevel()) {
+                ConsoleMessage.MessageLevel.DEBUG, null -> log.i(msg.message())
+                ConsoleMessage.MessageLevel.LOG, ConsoleMessage.MessageLevel.TIP -> log.i( msg.message())
+                ConsoleMessage.MessageLevel.WARNING -> log.i(msg.message())
+                ConsoleMessage.MessageLevel.ERROR -> log.i( msg.message())
+            }
+            return true
+        }
+        private var customViewCallback: IX5WebChromeClient.CustomViewCallback? = null
+
+        override fun onShowCustomView(view: View?, p1: IX5WebChromeClient.CustomViewCallback?) {
+            super.onShowCustomView(view, callback)
+            log.i("onShowCustomView")
+            if (view is FrameLayout) {
+                fullscreenView = view
+                customViewCallback = callback
+                //isFullscreen = true
+                //enterFullscreen()
+
+            }
+        }
+
+        override fun onHideCustomView() {
+            super.onHideCustomView()
+            log.i("onHideCustomView")
+            if (fullscreenView != null) {
+                //isFullscreen = false
+                //exitFullscreen()
+                fullscreenView = null
+                customViewCallback?.onCustomViewHidden()
+            }
+        }
+    }
+
+    private val chromeClientExtension = object : ProxyWebChromeClientExtension() {     }
+
+    init {
+        settings.apply {
+            javaScriptEnabled = true
+            domStorageEnabled = true
+            mediaPlaybackRequiresUserGesture = false
+            useWideViewPort = true
+            loadWithOverviewMode = true
+            setAppCacheEnabled(true)
+            cacheMode = WebSettings.LOAD_DEFAULT
+            databaseEnabled=true
+            blockNetworkImage=true
+            loadsImagesAutomatically=false
+            javaScriptCanOpenWindowsAutomatically=true
+        }
+        apply {
+            webViewClient = client
+            webViewClientExtension = clientExtension
+            webChromeClient = chromeClient
+            webChromeClientExtension = chromeClientExtension
+            //setLayerType(View.LAYER_TYPE_HARDWARE, null)
+            setBackgroundColor(Color.BLACK)
+            addJavascriptInterface(this, "AndroidBridge")
+        }
+    }
+    val URL_BLANK = "about:blank"
+    private val CHECK_PAGE_LOADING_INTERVAL = 50L
+    private val BLANK_PAGE_WAIT = 800L
+    private var isOpenBlankIng=false
+    override fun loadUrl(url: String?) {
+        if (url==URL_BLANK)
+        {
+            return
+        }
+        log.i( "Resetting page...")
+        CoroutineScope(Dispatchers.Main).launch {
+            val cost = measureTimeMillis {
+                isOpenBlankIng=true
+                super.loadUrl(URL_BLANK)
+                while (isOpenBlankIng) {
+                    delay(CHECK_PAGE_LOADING_INTERVAL)
+                }
+            }
+            log.i("Done Resetting, cost ${cost}ms.")
+            super.loadUrl(url)
+        }
+
+    }
+
+    @JavascriptInterface
+    fun clickKeyCodeF() {
+        log.i( "clickKeyCodeF()")
+        this.requestFocus()
+        val downTime = SystemClock.uptimeMillis()
+        dispatchKeyEvent(KeyEvent(downTime, downTime, KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_F, 0))
+        sleep(50)
+        dispatchKeyEvent(KeyEvent(downTime, SystemClock.uptimeMillis(), KeyEvent.ACTION_UP, KeyEvent.KEYCODE_F, 0))
+        //this.clearFocus()
+        //releaseFocus()
+    }
+
     @JavascriptInterface
     fun changeVideoResolution(width: Int, height: Int) {
+        log.i( "changeVideoResolution()")
         onVideoResolutionChanged(width, height)
-    }
-    @JavascriptInterface
-    public fun clickKeyCodeF() {
-        webView.requestFocus()
-        val downTime = SystemClock.uptimeMillis()
-        webView.dispatchKeyEvent(KeyEvent(downTime, downTime, KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_F, 0))
-        sleep(50)
-        webView.dispatchKeyEvent(KeyEvent(downTime, SystemClock.uptimeMillis(), KeyEvent.ACTION_UP, KeyEvent.KEYCODE_F, 0))
-
     }
 }

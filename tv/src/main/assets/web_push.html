@@ -114,7 +114,26 @@
                             </template>
                         </van-cell>
                     </van-cell-group>
-
+                    <van-cell-group inset title="网络代理">
+                        <van-cell title="设置代理">
+                            <template #label>
+                                <van-space class="w-full" direction="vertical" size="small">
+                                    <span>系统默认限定域名代理模式，格式：http(或socks)://user:password@example.org:20171</span>
+                                    <van-field class="!p-0" placeholder="置为空时，将启用全局禁用代理模式"
+                                               v-model="proxy.proxyUri" type="textarea" rows="2"></van-field>
+                                    <span>配置限定域名代理的域名集合，格式(逗号分割): *.google.com,www.youtube.com </span>
+                                    <van-field class="!p-0" placeholder="置为空时,限定域名代理模式不生效，将启用全局禁用代理模式"
+                                               v-model="proxy.proxySites" type="textarea" rows="2"></van-field>
+                                </van-space>
+                            </template>
+                            <template #extra>
+                                <van-button
+                                        @click="pushProxy"
+                                        size="small" type="primary">推送
+                                </van-button>
+                            </template>
+                        </van-cell>
+                    </van-cell-group>
                     <van-cell-group inset title="调试">
                         <van-cell title="上传apk">
                             <template #extra>
@@ -288,7 +307,21 @@
                         console.error(e)
                     }
                 }
-
+                const proxy = ref({ proxyUri: ``, proxySites: '' })
+                async function pushProxy() {
+                    try {
+                        vant.showLoadingToast({ message: '加载中...', forbidClick: true, duration: 0 })
+                        await requestApi('/api/proxy/push', {
+                            method: "POST",
+                            body: JSON.stringify({ ...proxy.value }),
+                            headers: { 'Content-Type': 'application/json' }
+                        })
+                        vant.showSuccessToast("推送proxy成功")
+                    } catch (e) {
+                        vant.showFailToast('推送proxy失败')
+                        console.error(e)
+                    }
+                }
                 async function uploadApkAfterRead(file) {
                     try {
                         vant.showLoadingToast({ message: '加载中...', forbidClick: true, duration: 0 })
@@ -319,6 +352,8 @@
                     videoPlayerUserAgent,
                     pushVideoPlayerUserAgent,
                     uploadApkAfterRead,
+                    proxy,
+                    pushProxy,
                 }
             }
         })

@@ -28,6 +28,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import top.yogiczy.mytv.core.data.network.getProxyDataSourceFactory
+import top.yogiczy.mytv.core.data.utils.ChannelUtil
 import top.yogiczy.mytv.tv.ui.utils.Configs
 
 @OptIn(UnstableApi::class)
@@ -41,8 +43,9 @@ class Media3VideoPlayer(
     private var softDecode: Boolean? = null
     private var surfaceView: SurfaceView? = null
     private var textureView: TextureView? = null
+    private var playingUrl:String?=null
 
-    private val dataSourceFactory by lazy {
+    /*private val dataSourceFactory by lazy {
         DefaultDataSource.Factory(
             context,
             DefaultHttpDataSource.Factory().apply {
@@ -53,22 +56,27 @@ class Media3VideoPlayer(
                 setAllowCrossProtocolRedirects(true)
             },
         )
-    }
+    }*/
 
     private val contentTypeAttempts = mutableMapOf<Int, Boolean>()
     private var updatePositionJob: Job? = null
 
     private fun getPlayer(): ExoPlayer {
-        val renderersFactory = DefaultRenderersFactory(context)
+        /*val renderersFactory = DefaultRenderersFactory(context)
+            .setExtensionRendererMode(
+                if (softDecode ?: Configs.videoPlayerForceAudioSoftDecode)
+                    DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER
+                else DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON
+            )*/
+        val renderersFactory = FfmpegRenderersFactory(context)
             .setExtensionRendererMode(
                 if (softDecode ?: Configs.videoPlayerForceAudioSoftDecode)
                     DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER
                 else DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON
             )
 
-
-        MediaCodecVideoRenderer.skipMultipleFramesOnSameVsync =
-            Configs.videoPlayerSkipMultipleFramesOnSameVSync
+        //MediaCodecVideoRenderer.skipMultipleFramesOnSameVsync =
+        //    Configs.videoPlayerSkipMultipleFramesOnSameVSync
         return ExoPlayer
             .Builder(context)
             .setRenderersFactory(renderersFactory)
@@ -77,8 +85,8 @@ class Media3VideoPlayer(
     }
 
     private fun reInitPlayer() {
-        val uri = videoPlayer.currentMediaItem?.localConfiguration?.uri
-
+        //val uri = videoPlayer.currentMediaItem?.localConfiguration?.uri
+        val uri =Uri.parse(regetPlayUrl())
         videoPlayer.removeListener(playerListener)
         videoPlayer.removeAnalyticsListener(metadataListener)
         videoPlayer.removeAnalyticsListener(eventLogger)
@@ -92,10 +100,17 @@ class Media3VideoPlayer(
 
         surfaceView?.let { setVideoSurfaceView(it) }
         textureView?.let { setVideoTextureView(it) }
-        uri?.let { prepare(uri) }
+        uri?.let { prepare(uri.toString()) }
     }
-
-    private fun getMediaSource(uri: Uri, contentType: Int? = null): MediaSource? {
+    private fun regetPlayUrl(): String? {
+        if (playingUrl.isNullOrEmpty()){
+            return videoPlayer.currentMediaItem?.localConfiguration?.uri?.toString()
+        }else{
+            return playingUrl
+        }
+    }
+    private fun getMediaSource(url: String, contentType: Int? = null): MediaSource? {
+        val uri=Uri.parse(ChannelUtil.clearAllPrefixFromUrl(url))
         val mediaItem = MediaItem.fromUri(uri)
 
         if (uri.toString().startsWith("rtp://")) {
@@ -104,7 +119,7 @@ class Media3VideoPlayer(
 
         return when (val type = contentType ?: Util.inferContentType(uri)) {
             C.CONTENT_TYPE_HLS -> {
-                HlsMediaSource.Factory(dataSourceFactory).createMediaSource(mediaItem)
+                HlsMediaSource.Factory(getProxyDataSourceFactory(url)).createMediaSource(mediaItem)
             }
 
             C.CONTENT_TYPE_RTSP -> {
@@ -112,7 +127,7 @@ class Media3VideoPlayer(
             }
 
             C.CONTENT_TYPE_OTHER -> {
-                ProgressiveMediaSource.Factory(dataSourceFactory).createMediaSource(mediaItem)
+                ProgressiveMediaSource.Factory(getProxyDataSourceFactory(url)).createMediaSource(mediaItem)
             }
 
             else -> {
@@ -126,9 +141,9 @@ class Media3VideoPlayer(
         }
     }
 
-    private fun prepare(uri: Uri, contentType: Int? = null) {
-        val mediaSource = getMediaSource(uri, contentType)
-
+    private fun preparePlay(url: String, contentType: Int? = null) {
+        val mediaSource = getMediaSource(url, contentType)
+        val uri=Uri.parse(ChannelUtil.clearAllPrefixFromUrl(url))
         if (mediaSource != null) {
             contentTypeAttempts[contentType ?: Util.inferContentType(uri)] = true
             videoPlayer.setMediaSource(mediaSource)
@@ -156,13 +171,14 @@ class Media3VideoPlayer(
 
                 // 当解析容器不支持时，尝试使用其他解析容器
                 androidx.media3.common.PlaybackException.ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED -> {
-                    videoPlayer.currentMediaItem?.localConfiguration?.uri?.let {
+                    //videoPlayer.currentMediaItem?.localConfiguration?.uri?.let {
+                    regetPlayUrl()?.let {
                         if (contentTypeAttempts[C.CONTENT_TYPE_HLS] != true) {
-                            prepare(it, C.CONTENT_TYPE_HLS)
+                            preparePlay(it, C.CONTENT_TYPE_HLS)
                         } else if (contentTypeAttempts[C.CONTENT_TYPE_RTSP] != true) {
-                            prepare(it, C.CONTENT_TYPE_RTSP)
+                            preparePlay(it, C.CONTENT_TYPE_RTSP)
                         } else if (contentTypeAttempts[C.CONTENT_TYPE_OTHER] != true) {
-                            prepare(it, C.CONTENT_TYPE_OTHER)
+                            preparePlay(it, C.CONTENT_TYPE_OTHER)
                         } else {
                             val type = Util.inferContentType(it)
                             triggerError(
@@ -299,9 +315,12 @@ class Media3VideoPlayer(
             videoPlayer.stop()
 
         contentTypeAttempts.clear()
-        prepare(Uri.parse(url.let {
-            if (url.endsWith("?")) "${it}t" else it
-        }))
+        //prepare(Uri.parse(url.let {
+        //    if (url.endsWith("?")) "${it}t" else it
+        //}))
+        playingUrl=url
+        preparePlay(url)
+
     }
 
     override fun play() {
