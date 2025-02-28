@@ -131,43 +131,10 @@ fun WebViewComponent(
                                                                               if ((event.key === 'f' || event.key === 'F') && !isInputField) {
                                                                                 console.warn('handleKeyDown:'+event.key);
                                                                                 event.preventDefault(); // 阻止默认行为
-                                                                                userInteracted = true;
-                                                                                if (isYouTubePage()) {
-                                                                                  handleYouTubeVideo();
-                                                                                } else {
-                                                                                  handleStandardVideo();
-                                                                                }
+                                                                                userInteracted = true; 
+                                                                                handleStandardVideo(); 
                                                                               }
-                                                                            }
-                                                                
-                                                                            // 检测是否为 YouTube 页面
-                                                                            function isYouTubePage() {
-                                                                              //return window.location.hostname.includes('youtube.com');
-                                                                              return false;
-                                                                            }
-                                                                
-                                                                            // 处理 YouTube 视频
-                                                                            function handleYouTubeVideo() {
-                                                                              const iframe = document.querySelector('iframe');
-                                                                              if (iframe && iframe.src.includes('youtube.com/embed')) {
-                                                                                const player = new YT.Player(iframe, {
-                                                                                  events: {
-                                                                                    onReady: (event) => {
-                                                                                      const video = event.target;
-                                                                                      if (userInteracted) {
-                                                                                        video.playVideo(); // 播放视频
-                                                                                        enterInlineFullscreen(video.getIframe()); // 网页内全屏
-                                                                                      } else {
-                                                                                        console.warn('Play and fullscreen blocked: user interaction required.');
-                                                                                        clickKeyCodeF(); 
-                                                                                      }
-                                                                                    },
-                                                                                  },
-                                                                                });
-                                                                              } else {
-                                                                                console.warn('YouTube iframe not found!');
-                                                                              }
-                                                                            }
+                                                                            } 
                                                                             function clickKeyCodeF()
                                                                             {
                                                                                if (userInteracted) {
@@ -249,11 +216,11 @@ fun WebViewComponent(
                                                                                 //clickKeyCodeF(); 
                                                                                 return;
                                                                               } 
-                                                                                video.muted=false;
-                                                                                video.volume =1
-                                                                                if (video.paused || video.canplay) {
+                                                                              video.muted=false;
+                                                                              video.volume =1
+                                                                              if (video.paused || video.canplay) {
                                                                                   video.play();
-                                                                                }
+                                                                              }
                                                                               if (video.requestFullscreen) {
                                                                                 video.requestFullscreen().catch((err) => {
                                                                                   console.error('Failed to enter fullscreen:', err);
@@ -302,12 +269,7 @@ fun WebViewComponent(
                                                                               console.log('Entered inline fullscreen mode.');
                                                                             }
                                                                             // 检测并监听视频元素
-                                                                            function detectAndListenVideo() {
-                                                                              if (isYouTubePage()) {
-                                                                                // YouTube 页面不需要循环检测
-                                                                                return;
-                                                                              }
-                                                                
+                                                                            function detectAndListenVideo() { 
                                                                               // 查找当前文档中的视频元素
                                                                               const videos = document.querySelectorAll('video');
                                                                 
