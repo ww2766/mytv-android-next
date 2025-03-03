@@ -51,6 +51,7 @@ import top.yogiczy.mytv.tv.ui.screens.videoplayercontroller.VideoPlayerControlle
 import top.yogiczy.mytv.tv.ui.screens.videoplayerdiaplaymode.VideoPlayerDisplayModeScreen
 import top.yogiczy.mytv.tv.ui.screens.webview.WebViewComponent
 import top.yogiczy.mytv.tv.ui.screens.webview.X5WebViewComponent
+import top.yogiczy.mytv.tv.ui.screens.webview.X5WebViewScreen
 import top.yogiczy.mytv.tv.ui.utils.Configs
 import top.yogiczy.mytv.tv.ui.utils.captureBackKey
 import top.yogiczy.mytv.tv.ui.utils.handleDragGestures
@@ -171,8 +172,8 @@ fun MainContent(
 
             //QbSdk.
             mainContentState.isTempChannelScreenVisible = false
-            //X5WebViewScreen
-            X5WebViewComponent(
+            X5WebViewScreen(
+            //X5WebViewComponent(
                 urlProvider = { mainContentState.currentChannel.urlList[mainContentState.currentChannelUrlIdx] },
                 onVideoResolutionChanged = { width, height ->
                     videoPlayerState.metadata = videoPlayerState.metadata.copy(

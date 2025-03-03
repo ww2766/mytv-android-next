@@ -358,7 +358,7 @@ fun X5WebViewComponent(
                                                                             if (document.readyState === 'loading') {
                                                                               // 如果页面仍在加载，等待 DOMContentLoaded 事件
                                                                               document.addEventListener('DOMContentLoaded', onPageLoad);
-                                                                            } else {
+                                                                            } else if(document.body!=null) {
                                                                               // 如果页面已加载，直接初始化插件
                                                                               onPageLoad();
                                                                             }
@@ -490,7 +490,7 @@ class X5MyWebViewInterface(
     }
 
     @JavascriptInterface
-    public fun clickKeyCodeF() {
+    fun clickKeyCodeF() {
         webView.requestFocus()
         val downTime = SystemClock.uptimeMillis()
         webView.dispatchKeyEvent(

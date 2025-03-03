@@ -155,7 +155,7 @@ fun SettingsCategoryIptv(
                             settingsViewModel.iptvLastChannelIdx = 0
                             settingsViewModel.iptvChannelGroupHiddenList = emptySet()
                             coroutineScope.launch {
-                                IptvRepository(settingsViewModel.iptvSourceCurrent).clearCache()
+                                //IptvRepository(settingsViewModel.iptvSourceCurrent).clearCache()
                             }
                             mainViewModel.init()
                         }

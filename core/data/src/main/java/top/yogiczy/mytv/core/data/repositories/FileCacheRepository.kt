@@ -59,7 +59,10 @@ open class FileCacheRepository(
         if (!oldData.isNullOrBlank()&&!isExpired(getCacheFile().lastModified(), oldData)) {
             return oldData
         }else{
-            val newData = refreshOp()
+            var newData ="";
+            try {
+                newData = refreshOp()
+            }catch (_:Exception){}
             if (newData.isNotBlank()) {
                 setCacheData(newData)
                 return newData

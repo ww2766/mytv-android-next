@@ -87,6 +87,7 @@ dependencies {
     implementation(libs.androidx.material.icons.extended)
     implementation(libs.androidx.material3.android)
     implementation(libs.androidx.ui.android)
+    implementation(libs.androidx.webkit)
 
     // 播放器
     val mediaSettingsFile = file("../../media/core_settings.gradle")

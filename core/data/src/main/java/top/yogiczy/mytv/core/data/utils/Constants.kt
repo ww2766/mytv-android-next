@@ -26,11 +26,7 @@ object Constants {
         listOf(
             IptvSource(
                 name = "默认直播源",
-                url = "proxy://https://b.tpy.us.kg/common",
-            ),
-            IptvSource(
-                name = "默认直播源SH",
-                url = "http://read.dwqgbh.cloudns.org/a/sh.txt",
+                url = "https://b.tpy.us.kg/common",
             ),
         )
     )

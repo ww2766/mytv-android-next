@@ -134,7 +134,7 @@ object HttpServer : Loggable() {
                               </iframe>   
                               <script>
                                     try{
-                                        Android.changeVideoResolution(1280 ,720)
+                                        window.AndroidBridge.changeVideoResolution(1280 ,720);
                                      }catch(e){}
                               </script>  
                               </body>
