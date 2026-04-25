@@ -159,13 +159,13 @@ object ChannelUtil {
                 listOf("中央", "九"),
             )
         ),
-        "上海卫视" to { name: String ->
+        "东方卫视" to { name: String ->
             name.contains("上海卫视")
                     || name.contains("东方卫视")
                     || name.contains("上海台")
                     || name.contains("上海东方卫视")
         },
-        "福建卫视" to { name: String ->
+        "东南卫视" to { name: String ->
             name.contains("福建卫视")
                     || name.contains("福建东南卫视")
                     || name.contains("东南卫视")
@@ -183,6 +183,7 @@ object ChannelUtil {
         ),
         "CCTV-3综艺" to listOf(
             "https://tv.cctv.com/live/cctv3/",
+            "https://yangshipin.cn/tv/home?pid=600001801"
         ),
         "CCTV-4国际" to listOf(
             "https://tv.cctv.com/live/cctv4/",
@@ -198,6 +199,7 @@ object ChannelUtil {
         ),
         "CCTV-6电影" to listOf(
             "https://tv.cctv.com/live/cctv6/",
+            "https://yangshipin.cn/tv/home?pid=600001801"
         ),
         "CCTV-7军事" to listOf(
             "https://tv.cctv.com/live/cctv7/",
@@ -205,6 +207,7 @@ object ChannelUtil {
         ),
         "CCTV-8电视" to listOf(
             "https://tv.cctv.com/live/cctv8/",
+            "https://yangshipin.cn/tv/home?pid=600001803"
         ),
         "CCTV-9纪录" to listOf(
             "https://tv.cctv.com/live/cctvjilu/",
@@ -240,69 +243,87 @@ object ChannelUtil {
         ),
         "CCTV-17农村" to listOf(
             "https://tv.cctv.com/live/cctv17/",
+            "https://yangshipin.cn/tv/home?pid=600001810"
         ),
         "北京卫视" to listOf(
             "https://yangshipin.cn/tv/home?pid=600002309",
+            "https://www.brtn.cn/btv/btvsy_index"
         ),
         "江苏卫视" to listOf(
             "https://yangshipin.cn/tv/home?pid=600002521",
+            "https://live.jstv.com/"
         ),
-        "上海卫视" to listOf(
+        "东方卫视" to listOf(
             "https://yangshipin.cn/tv/home?pid=600002483",
+            "https://live.kankanews.com/huikan/"
         ),
         "浙江卫视" to listOf(
             "https://yangshipin.cn/tv/home?pid=600002520",
+            "https://www.cztv.com/liveTV"
         ),
         "湖南卫视" to listOf(
             "https://yangshipin.cn/tv/home?pid=600002475",
         ),
         "湖北卫视" to listOf(
             "https://yangshipin.cn/tv/home?pid=600002508",
+            "https://news.hbtv.com.cn/app/tv/431"
         ),
         "广东卫视" to listOf(
             "https://yangshipin.cn/tv/home?pid=600002485",
+            "https://www.gdtv.cn/tvChannelDetail/43"
         ),
         "广西卫视" to listOf(
             "https://yangshipin.cn/tv/home?pid=600002509",
+            "https://tv.gxtv.cn/channel/channelivePlay_e7a7ab7df9fe11e88bcfe41f13b60c62.html"
         ),
         "黑龙江卫视" to listOf(
             "https://yangshipin.cn/tv/home?pid=600002498",
+            "https://www.hljtv.com/live/"
         ),
         "海南卫视" to listOf(
             "https://yangshipin.cn/tv/home?pid=600002506",
+            "http://tc.hnntv.cn/zb/28666112.shtml"
         ),
         "重庆卫视" to listOf(
             "https://yangshipin.cn/tv/home?pid=600002531",
         ),
         "深圳卫视" to listOf(
             "https://yangshipin.cn/tv/home?pid=600002481",
+            "https://www.sztv.com.cn/dianshi.shtml?id=7867"
         ),
         "四川卫视" to listOf(
             "https://yangshipin.cn/tv/home?pid=600002516",
         ),
         "河南卫视" to listOf(
             "https://yangshipin.cn/tv/home?pid=600002525",
+            "https://static.hntv.tv/kds/#/"
         ),
-        "福建卫视" to listOf(
+        "东南卫视" to listOf(
             "https://yangshipin.cn/tv/home?pid=600002484",
+            "http://www.setv.fjtv.net/live/"
         ),
         "贵州卫视" to listOf(
             "https://yangshipin.cn/tv/home?pid=600002490",
+            "https://www.gzstv.com/tv/ch01"
         ),
         "江西卫视" to listOf(
             "https://yangshipin.cn/tv/home?pid=600002503",
+            "https://www.jxntv.cn/live/#/jxtv1"
         ),
         "辽宁卫视" to listOf(
             "https://yangshipin.cn/tv/home?pid=600002505",
         ),
         "安徽卫视" to listOf(
             "https://yangshipin.cn/tv/home?pid=600002532",
+            "https://www.ahtv.cn/folder9000/folder20193?channelIndex=0"
         ),
         "河北卫视" to listOf(
             "https://yangshipin.cn/tv/home?pid=600002493",
+            "https://www.hebtv.com/19/19js/st/xdszb/index.shtml?index=0"
         ),
         "山东卫视" to listOf(
             "https://yangshipin.cn/tv/home?pid=600002513",
+            "https://v.iqilu.com/live/sdtv/index.html"
         ),
     )
 

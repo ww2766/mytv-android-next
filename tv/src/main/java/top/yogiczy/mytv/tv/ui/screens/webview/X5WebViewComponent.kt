@@ -32,8 +32,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.focus.FocusManager
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.viewinterop.AndroidView
 import top.yogiczy.mytv.core.data.network.WebViewUtils.updateWebViewProxy
 import top.yogiczy.mytv.core.data.utils.ChannelUtil
@@ -491,7 +494,7 @@ class X5MyWebViewInterface(
 
     @JavascriptInterface
     fun clickKeyCodeF() {
-        webView.requestFocus()
+        //webView.requestFocus()
         val downTime = SystemClock.uptimeMillis()
         webView.dispatchKeyEvent(
             KeyEvent(
@@ -502,7 +505,7 @@ class X5MyWebViewInterface(
                 0
             )
         )
-        sleep(50)
+        sleep(10)
         webView.dispatchKeyEvent(
             KeyEvent(
                 downTime,
@@ -512,6 +515,8 @@ class X5MyWebViewInterface(
                 0
             )
         )
+
+        onVideoResolutionChanged(-100,-100)
     }
 
 }

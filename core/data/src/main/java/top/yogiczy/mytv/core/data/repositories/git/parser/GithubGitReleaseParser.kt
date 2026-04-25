@@ -12,7 +12,8 @@ import top.yogiczy.mytv.core.data.utils.Constants
  */
 class GithubGitReleaseParser : GitReleaseParser {
     override fun isSupport(url: String): Boolean {
-        return url.contains("github.com")
+        //return url.contains("github.com")
+        return true;
     }
 
     override suspend fun parse(data: String): GitRelease {

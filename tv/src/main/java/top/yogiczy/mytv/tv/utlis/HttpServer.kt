@@ -54,7 +54,9 @@ object HttpServer : Loggable() {
                 server.get("/web_push_js.js") { _, response ->
                     handleAssetsResource(response, context, "text/javascript", "web_push_js.js")
                 }
-
+                server.get("/web_view.txt") { _, response ->
+                    handleAssetsResource(response, context, "text/plain", "web_view.txt")
+                }
                 server.get("/api/info") { _, response ->
                     handleGetInfo(response)
                 }
@@ -87,65 +89,32 @@ object HttpServer : Loggable() {
                     handleUploadApk(request, response, context)
                 }
                 server.get("/upgradeWebView") { request, response ->
-                    //checkWebViewRunState()
                     log.i("upgradeWebView已启动 ")
-
-                    //upgradeWebView(context)
                     wrapResponse(response).apply {
                         setContentType("text/html")
                         send("upgradeWebView...")
                     }
                     log.i("upgradeWebView已完成 ")
                 }
-                server.get("/channel") { request, response ->
-                    log.i("channel: ${request.query["id"]?.get(0)}")
-                    var ret=""
-                    if ("youtube" == request.query["site"]?.get(0)){
-                        ret="""  
-                            <!DOCTYPE html>
-                            <html>
-                            <head>
-                                <style>
-                                    html, body {
-                                        width: 100%;
-                                        height: 100%;
-                                        margin: 0;
-                                        padding: 0;
-                                        overflow: hidden;
-                                    }
-                                    iframe {
-                                        position: absolute;
-                                        top: 0;
-                                        left: 0;
-                                        width: 100%;
-                                        height: 100%;
-                                        border: none;
-                                    }
-                                </style>
-                            </head>
-                            <body>
-                            <iframe   
-                              frameborder="0"
-                              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share;"
-                              allowfullscreen="true"
-                              allow="fullscreen"
-                              src="https://www.youtube.com/embed/${request.query["id"]?.get(0)}?autoplay=1&playsinline=0&fs=1&rel=0"
-                              > 
-                              </iframe>   
-                              <script>
-                                    try{
-                                        window.AndroidBridge.changeVideoResolution(1280 ,720);
-                                     }catch(e){}
-                              </script>  
-                              </body>
-                                </html>
-                               """
+                server.get("/plugins/(.*)") { request, response ->
+                    val contentType = when (request.path.split(".").last().split("?").first()) {
+                        "css" -> "text/css"
+                        "js" -> "text/javascript"
+                        "html" -> "text/html"
+                        "json" -> "application/json"
+                        "svg" -> "image/svg+xml"
+                        "png" -> "image/png"
+                        else -> "text/plain"
+                    }
+                    val filename=request.path.removePrefix("/").split("?").first()
+                    var ret=context.assets.open(filename).reader().readText()
+                    request.query.entries.forEach { entity ->
+                        ret=ret.replace("\${${entity.key.toString()}}",entity.value[0].toString())
                     }
                     wrapResponse(response).apply {
-                        setContentType("text/html")
+                        setContentType(contentType)
                         send(ret)
-                    }
-                    log.i("channel: ${request.path}${request.url}")
+                    } 
                 }
                 log.i("设置服务已启动: $serverUrl")
             } catch (ex: Exception) {
@@ -156,6 +125,7 @@ object HttpServer : Loggable() {
             }
         }
     }
+   
 
     private fun wrapResponse(response: AsyncHttpServerResponse) = response.apply {
         headers.set("Access-Control-Allow-Methods", "POST, GET, DELETE, PUT, OPTIONS")
@@ -440,6 +410,7 @@ object HttpServer : Loggable() {
         }
     }
 }
+
 
 @Serializable
 private data class AppInfo(

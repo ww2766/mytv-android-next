@@ -63,43 +63,42 @@ fun SettingsCategoryVideoPlayer(
                 },
             )
         }
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
-            item {
-                AnimatedVisibility(
-                    visible = updateViewModel.isUpdateAvailable,
-                    enter = fadeIn(),
-                    exit = fadeOut()
-                ) {
-                    val focusRequester = remember { FocusRequester() }
+        //if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
+        item {
+            AnimatedVisibility(
+                visible = updateViewModel.isUpdateAvailable,
+                enter = fadeIn(),
+                exit = fadeOut()
+            ) {
+                val focusRequester = remember { FocusRequester() }
 
-                    SettingsListItem(
-                        modifier = Modifier.focusRequester(focusRequester),
-                        headlineContent = "腾讯X5 WebView 安装",
-                        supportingContent = updateViewModel.process,
-                        onSelected = {
-                            updateViewModel.loadX5(context,20,null)
-                        },
-                    )
-                }
-                AnimatedVisibility(
-                    visible = updateViewModel.isSuccessInstalled,
-                    enter = fadeIn(),
-                    exit = fadeOut()
-                ) {
-                    val focusRequester = remember { FocusRequester() }
-                    SettingsListItem(
-                        modifier = Modifier.focusRequester(focusRequester),
-                        headlineContent = "启用腾讯X5WebView",
-                        supportingContent = "默认使用系统内置WebView，开启使用腾讯X5内核，打开开关后，请重启本APP后生效",
-                        trailingContent = {
-                            Switch(!settingsViewModel.sysWebViewMode, null)
-                        },
-                        onSelected = {
-                            settingsViewModel.sysWebViewMode =
-                                !settingsViewModel.sysWebViewMode
-                        },
-                    )
-                }
+                SettingsListItem(
+                    modifier = Modifier.focusRequester(focusRequester),
+                    headlineContent = "腾讯X5 WebView 安装",
+                    supportingContent = updateViewModel.process,
+                    onSelected = {
+                        updateViewModel.loadX5(context,20,null)
+                    },
+                )
+            }
+            AnimatedVisibility(
+                visible = updateViewModel.isSuccessInstalled,
+                enter = fadeIn(),
+                exit = fadeOut()
+            ) {
+                val focusRequester = remember { FocusRequester() }
+                SettingsListItem(
+                    modifier = Modifier.focusRequester(focusRequester),
+                    headlineContent = "启用腾讯X5WebView",
+                    supportingContent = "默认使用系统内置WebView，开启使用腾讯X5内核，打开开关后，请重启本APP后生效",
+                    trailingContent = {
+                        Switch(!settingsViewModel.sysWebViewMode, null)
+                    },
+                    onSelected = {
+                        settingsViewModel.sysWebViewMode =
+                            !settingsViewModel.sysWebViewMode
+                    },
+                )
             }
         }
 

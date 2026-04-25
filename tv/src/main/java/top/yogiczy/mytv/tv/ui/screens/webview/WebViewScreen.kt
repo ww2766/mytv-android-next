@@ -354,9 +354,12 @@ class MyClient(
                                       } else if (video.msRequestFullscreen) { // IE/Edge 支持
                                         video.msRequestFullscreen();
                                       }
-                                      video.muted=false;
-                                      video.volume =1
-                                      video.play();
+                                      if(video.muted){
+                                          video.muted=false;
+                                      } 
+                                      if (video.paused){
+                                          video.play();
+                                      }
                                       userInteracted = false; // 重置用户交互标志
                                       console.log('Entered inline fullscreen mode.');
                                     }

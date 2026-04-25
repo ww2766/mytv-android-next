@@ -72,7 +72,8 @@ open class FileCacheRepository(
         {
             return oldData
         }
-        return ""
+        throw Exception()
+        //return ""
     }
 
     open suspend fun clearCache() {

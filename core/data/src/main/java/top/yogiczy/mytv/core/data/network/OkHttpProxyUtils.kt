@@ -12,6 +12,7 @@ import androidx.webkit.WebViewFeature
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.Authenticator
+import okhttp3.ConnectionSpec
 import okhttp3.Credentials
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -28,6 +29,10 @@ import java.net.MalformedURLException
 import java.net.Proxy
 import java.net.URI
 import java.net.URL
+import java.security.cert.X509Certificate
+import javax.net.ssl.SSLContext
+import javax.net.ssl.TrustManager
+import javax.net.ssl.X509TrustManager
 
 /**
  * 获取数据
@@ -63,7 +68,8 @@ fun getProxyOkHttpClient(url: String): OkHttpClient {
     }catch (ex: MalformedURLException) {
         ex.printStackTrace();
     }
-
+    // 获取不安全的 Builder，而不是默认的 Builder
+    val clientBuilder = getUnsafeOkHttpClientBuilder()
     // 获取服务器地址
     //val serverAddress = (proxyUri?.protocol ?: ) + "://" +proxyUri.host+":"+proxyUri.port.toString()
     if(proxyUri!=null && isUseProxy(url)) {
@@ -93,20 +99,20 @@ fun getProxyOkHttpClient(url: String): OkHttpClient {
                     .build()
             }
         }
-        client = OkHttpClient.Builder()
-            .proxy(Proxy(proxyType, InetSocketAddress(proxyUri.host, proxyUri.port)))
-            .proxyAuthenticator(proxyAuthenticator)
-            .build()
+        try {
+            clientBuilder.proxy(Proxy(proxyType, InetSocketAddress(proxyUri.host, proxyUri.port)))
+                .proxyAuthenticator(proxyAuthenticator)
+        }catch (ex:Exception)
+        {
+            println(ex)
+            ex.printStackTrace()
+        }
     }
     //println("Username: $username")
     //println("Password: $password")
     //println("Server Address: $serverAddress")
 
-    if (client==null){
-        client = OkHttpClient.Builder()
-            .build()
-    }
-    return client
+    return clientBuilder.build()
 }
 
 @OptIn(UnstableApi::class)
@@ -145,3 +151,40 @@ fun isUseProxy(url: String):Boolean{
     return SP.proxyType == SP.ProxyType.LIMIT && (isPrefixProxy || isSiteProxy)
 }
 
+/**
+ * 获取一个兼容性更强的、不安全的 OkHttpClient.Builder。
+ * 它不仅信任所有 SSL 证书，还启用了更广泛的 TLS 版本和加密套件。
+ * 警告：这会使应用容易受到中间人攻击。
+ */
+fun getUnsafeOkHttpClientBuilder(): OkHttpClient.Builder {
+    try {
+        // 1. 创建一个信任所有网站的 TrustManager (和之前一样)
+        val trustAllCerts = arrayOf<TrustManager>(
+            object : X509TrustManager {
+                override fun checkClientTrusted(chain: Array<out X509Certificate>?, authType: String?) {}
+                override fun checkServerTrusted(chain: Array<out X509Certificate>?, authType: String?) {}
+                override fun getAcceptedIssuers(): Array<X509Certificate> = arrayOf()
+            }
+        )
+
+        // 2. 安装这个 TrustManager (和之前一样)
+        val sslContext = SSLContext.getInstance("SSL")
+        sslContext.init(null, trustAllCerts, java.security.SecureRandom())
+        val sslSocketFactory = sslContext.socketFactory
+
+        // 3. 创建一个更具兼容性的 ConnectionSpec
+        // 这个规范允许使用旧版本的 TLS，以兼容更多的服务器
+        val spec = ConnectionSpec.Builder(ConnectionSpec.COMPATIBLE_TLS)
+            .build()
+
+        // 4. 创建 OkHttpClient.Builder 并应用所有配置
+        val builder = OkHttpClient.Builder()
+        builder.sslSocketFactory(sslSocketFactory, trustAllCerts[0] as X509TrustManager)
+        builder.hostnameVerifier { _, _ -> true } // 不验证主机名
+        builder.connectionSpecs(listOf(spec, ConnectionSpec.CLEARTEXT)) // 应用兼容性规范
+
+        return builder
+    } catch (e: Exception) {
+        throw RuntimeException(e)
+    }
+}

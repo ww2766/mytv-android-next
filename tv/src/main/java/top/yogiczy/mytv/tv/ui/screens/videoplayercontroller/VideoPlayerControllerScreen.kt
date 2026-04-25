@@ -39,15 +39,15 @@ fun VideoPlayerControllerScreen(
         modifier = modifier.captureBackKey { onClose() },
         onDismissRequest = onClose,
         position = DrawerPosition.Bottom,
+        containerColor =  Color.Black.copy(alpha = 0.1f),
         //header = { Text("播放控制") },
     ) {
         Row(
-            modifier = Modifier.padding(top = 0.dp),
+            modifier = Modifier.padding(top = 0.dp).background(Color.Transparent),
             horizontalArrangement = Arrangement.spacedBy(10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             VideoPlayerControllerStateCtrl(
-                modifier = Modifier.focusOnLaunchedSaveable(),
                 isPlayingProvider = isVideoPlayerPlayingProvider,
                 isBufferingProvider = isVideoPlayerBufferingProvider,
                 onPlay = onVideoPlayerPlay,
@@ -55,6 +55,7 @@ fun VideoPlayerControllerScreen(
             )
 
             VideoPlayerControllerPositionCtrl(
+                modifier = Modifier.focusOnLaunchedSaveable(),
                 currentPositionProvider = videoPlayerCurrentPositionProvider,
                 durationProvider = videoPlayerDurationProvider,
                 onSeekTo = onVideoPlayerSeekTo,

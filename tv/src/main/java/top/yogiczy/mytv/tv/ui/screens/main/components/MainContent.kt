@@ -1,6 +1,6 @@
 package top.yogiczy.mytv.tv.ui.screens.main.components
 
-import android.view.View
+
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -11,10 +11,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusEvent
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.tencent.smtt.sdk.QbSdk
 import kotlinx.collections.immutable.toImmutableList
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import top.yogiczy.mytv.core.data.entities.channel.ChannelGroupList
 import top.yogiczy.mytv.core.data.entities.channel.ChannelGroupList.Companion.channelIdx
 import top.yogiczy.mytv.core.data.entities.channel.ChannelGroupList.Companion.channelList
@@ -27,6 +34,7 @@ import top.yogiczy.mytv.core.data.entities.epg.EpgProgrammeReserveList
 import top.yogiczy.mytv.core.data.repositories.epg.EpgRepository
 import top.yogiczy.mytv.core.data.repositories.iptv.IptvRepository
 import top.yogiczy.mytv.core.data.utils.ChannelUtil
+import top.yogiczy.mytv.core.data.utils.Logger
 import top.yogiczy.mytv.tv.ui.material.PopupContent
 import top.yogiczy.mytv.tv.ui.material.Snackbar
 import top.yogiczy.mytv.tv.ui.material.Visible
@@ -45,12 +53,12 @@ import top.yogiczy.mytv.tv.ui.screens.monitor.MonitorScreen
 import top.yogiczy.mytv.tv.ui.screens.quickop.QuickOpScreen
 import top.yogiczy.mytv.tv.ui.screens.settings.SettingsScreen
 import top.yogiczy.mytv.tv.ui.screens.settings.SettingsViewModel
+import top.yogiczy.mytv.tv.ui.screens.update.UpdateScreen
 import top.yogiczy.mytv.tv.ui.screens.videoplayer.VideoPlayerScreen
 import top.yogiczy.mytv.tv.ui.screens.videoplayer.rememberVideoPlayerState
 import top.yogiczy.mytv.tv.ui.screens.videoplayercontroller.VideoPlayerControllerScreen
 import top.yogiczy.mytv.tv.ui.screens.videoplayerdiaplaymode.VideoPlayerDisplayModeScreen
 import top.yogiczy.mytv.tv.ui.screens.webview.WebViewComponent
-import top.yogiczy.mytv.tv.ui.screens.webview.X5WebViewComponent
 import top.yogiczy.mytv.tv.ui.screens.webview.X5WebViewScreen
 import top.yogiczy.mytv.tv.ui.utils.Configs
 import top.yogiczy.mytv.tv.ui.utils.captureBackKey
@@ -67,6 +75,7 @@ fun MainContent(
     epgListProvider: () -> EpgList = { EpgList() },
     settingsViewModel: SettingsViewModel = viewModel(),
 ) {
+    val log= Logger.create("MainContent")
     val coroutineScope = rememberCoroutineScope()
     val focusRequester = remember { FocusRequester() }
     val videoPlayerState =
@@ -81,9 +90,77 @@ fun MainContent(
             mainContentState.changeCurrentChannel(channel)
         }
     }
+    Box(
+        modifier = modifier
+            .popupable()
+            .captureBackKey { onBackPressed() }
+            .focusable(false)
+    ) {
+        VideoPlayerScreen(
+            state = videoPlayerState,
+            showMetadataProvider = { settingsViewModel.debugShowVideoPlayerMetadata },
+        )
+
+        Visible({ Configs.sysWebViewMode && ChannelUtil.isHybridWebViewUrl(mainContentState.currentChannel.urlList[mainContentState.currentChannelUrlIdx]) }) {
+
+            QbSdk.forceSysWebView()
+            //WebViewScreen( WebViewComponentTest WebViewWithFullscreenVideo
+            WebViewComponent(
+                urlProvider = { mainContentState.currentChannel.urlList[mainContentState.currentChannelUrlIdx] },
+                onVideoResolutionChanged = { width, height ->
+                    if(width==-100){
+                        coroutineScope.launch(Dispatchers.IO) {
+                            withContext(Dispatchers.Main) { // 切换回主线程
+                                //focusRequester.requestFocus()
+                            }
+                        }
+                    }
+                    else {
+                        videoPlayerState.metadata = videoPlayerState.metadata.copy(
+                            videoWidth = width,
+                            videoHeight = height,
+                        )
+                        mainContentState.isTempChannelScreenVisible = false
+                    }
+                },
+            )
+        }
+        Visible({ !Configs.sysWebViewMode && ChannelUtil.isHybridWebViewUrl(mainContentState.currentChannel.urlList[mainContentState.currentChannelUrlIdx]) }) {
+
+            QbSdk.unForceSysWebView()
+
+            //QbSdk.
+            //mainContentState.isTempChannelScreenVisible = false
+            X5WebViewScreen(
+                //X5WebViewComponent(
+                urlProvider = { mainContentState.currentChannel.urlList[mainContentState.currentChannelUrlIdx] },
+                onVideoResolutionChanged = { width, height ->
+                    if(width==-100){
+                        log.i("X5WebViewScreen onVideoResolutionChanged focusRequester.requestFocus() start")
+                        coroutineScope.launch(Dispatchers.IO) {
+                            withContext(Dispatchers.Main) { // 切换回主线程
+                                focusRequester.requestFocus()
+                            }
+                        }
+                        log.i("X5WebViewScreen onVideoResolutionChanged focusRequester.requestFocus() end")
+                    }
+                    else {
+                        videoPlayerState.metadata = videoPlayerState.metadata.copy(
+                            videoWidth = width,
+                            videoHeight = height,
+                        )
+                        mainContentState.isTempChannelScreenVisible = false
+                    }
+                },
+            )
+        }
+    }
+
 
     Box(
         modifier = modifier
+            .fillMaxSize()
+            .alpha(0f)
             .popupable()
             .captureBackKey { onBackPressed() }
             .handleKeyEvents(
@@ -144,113 +221,22 @@ fun MainContent(
                         )
                     }
                 },
-            ),
+            )
+            .focusRequester(focusRequester)
+            .focusable(true)
+            .onFocusEvent { focusState ->
+                log.i("focusState.isFocused:"+focusState.isFocused.toString())
+                log.i("focusState.hasFocus:"+focusState.hasFocus.toString())
+            if (!focusState.isFocused) {
+
+                // 3. 失去焦点时延迟 10ms 重新请求
+                //coroutineScope.launch {
+                //        delay(20)
+                //        focusRequester.requestFocus()
+                //    }
+                }
+            }
     ) {
-        VideoPlayerScreen(
-            state = videoPlayerState,
-            showMetadataProvider = { settingsViewModel.debugShowVideoPlayerMetadata },
-        )
-
-        Visible({Configs.sysWebViewMode && ChannelUtil.isHybridWebViewUrl(mainContentState.currentChannel.urlList[mainContentState.currentChannelUrlIdx]) }) {
-
-            QbSdk.forceSysWebView()
-            //WebViewScreen( WebViewComponentTest WebViewWithFullscreenVideo
-            WebViewComponent(
-                urlProvider = { mainContentState.currentChannel.urlList[mainContentState.currentChannelUrlIdx] },
-                onVideoResolutionChanged = { width, height ->
-                    videoPlayerState.metadata = videoPlayerState.metadata.copy(
-                        videoWidth = width,
-                        videoHeight = height,
-                    )
-                    mainContentState.isTempChannelScreenVisible = false
-                },
-            )
-        }
-        Visible({!Configs.sysWebViewMode && ChannelUtil.isHybridWebViewUrl(mainContentState.currentChannel.urlList[mainContentState.currentChannelUrlIdx]) }) {
-
-            QbSdk.unForceSysWebView()
-
-            //QbSdk.
-            mainContentState.isTempChannelScreenVisible = false
-            X5WebViewScreen(
-            //X5WebViewComponent(
-                urlProvider = { mainContentState.currentChannel.urlList[mainContentState.currentChannelUrlIdx] },
-                onVideoResolutionChanged = { width, height ->
-                    videoPlayerState.metadata = videoPlayerState.metadata.copy(
-                        videoWidth = width,
-                        videoHeight = height,
-                    )
-                    mainContentState.isTempChannelScreenVisible = false
-                },
-            )
-        }
-        Box(
-            modifier = modifier
-                .fillMaxSize()
-                .alpha(0f)
-                .popupable()
-                .focusable(true)
-                .captureBackKey { onBackPressed() }
-                .handleKeyEvents(
-                    onUp = {
-                        if (settingsViewModel.iptvChannelChangeFlip) mainContentState.changeCurrentChannelToNext()
-                        else mainContentState.changeCurrentChannelToPrev()
-                    },
-                    onDown = {
-                        if (settingsViewModel.iptvChannelChangeFlip) mainContentState.changeCurrentChannelToPrev()
-                        else mainContentState.changeCurrentChannelToNext()
-                    },
-                    onLeft = {
-                        if (mainContentState.currentChannel.urlList.size > 1) {
-                            mainContentState.changeCurrentChannel(
-                                mainContentState.currentChannel,
-                                mainContentState.currentChannelUrlIdx - 1,
-                            )
-                        }
-                    },
-                    onRight = {
-                        if (mainContentState.currentChannel.urlList.size > 1) {
-                            mainContentState.changeCurrentChannel(
-                                mainContentState.currentChannel,
-                                mainContentState.currentChannelUrlIdx + 1,
-                            )
-                        }
-                    },
-                    onSelect = { mainContentState.isChannelScreenVisible = true },
-                    onLongSelect = { mainContentState.isQuickOpScreenVisible = true },
-                    onSettings = { mainContentState.isQuickOpScreenVisible = true },
-                    onLongLeft = { mainContentState.isEpgScreenVisible = true },
-                    onLongRight = { mainContentState.isChannelUrlScreenVisible = true },
-                    onLongDown = { mainContentState.isVideoPlayerControllerScreenVisible = true },
-                    onNumber = { channelNumberSelectState.input(it) },
-                )
-                .handleDragGestures(
-                    onSwipeDown = {
-                        if (settingsViewModel.iptvChannelChangeFlip) mainContentState.changeCurrentChannelToNext()
-                        else mainContentState.changeCurrentChannelToPrev()
-                    },
-                    onSwipeUp = {
-                        if (settingsViewModel.iptvChannelChangeFlip) mainContentState.changeCurrentChannelToPrev()
-                        else mainContentState.changeCurrentChannelToNext()
-                    },
-                    onSwipeRight = {
-                        if (mainContentState.currentChannel.urlList.size > 1) {
-                            mainContentState.changeCurrentChannel(
-                                mainContentState.currentChannel,
-                                mainContentState.currentChannelUrlIdx - 1,
-                            )
-                        }
-                    },
-                    onSwipeLeft = {
-                        if (mainContentState.currentChannel.urlList.size > 1) {
-                            mainContentState.changeCurrentChannel(
-                                mainContentState.currentChannel,
-                                mainContentState.currentChannelUrlIdx + 1,
-                            )
-                        }
-                    },
-                ),
-        ) {}
     }
 
     Visible({ settingsViewModel.uiShowEpgProgrammePermanentProgress }) {
@@ -544,8 +530,7 @@ fun MainContent(
         },
     )
 
-    //top.yogiczy.mytv.tv.ui.screens.x5.UpdateScreen()
-    //top.yogiczy.mytv.tv.ui.screens.update.UpdateScreen()
-
+    UpdateScreen()
     Visible({ settingsViewModel.debugShowFps }) { MonitorScreen() }
+
 }

@@ -40,12 +40,13 @@ class IptvRepository(
         try {
             val gList = mutableListOf<IptvParser.IptvResponseItem>()
             val urlList=if (source.isLocal) listOf(source.url)
-            else source.url.replace(';','#').replace(',','#').replace('$','#').replace('\n','#').split('#')
+            else source.url.replace(';','\n').replace(',','\n').replace('$','\n').split('\n')
             var hasFailure=false
             urlList.forEach { item ->
                 val url=item.trim()
                 if(url.isEmpty())return@forEach
-                val fileCacheRepository=FileCacheRepository("iptv-${url.hashCode().toUInt().toString(16)}.txt",false)
+                val fileCacheRepository=FileCacheRepository(
+                    if (source.isLocal) url else "iptv-${url.hashCode().toUInt().toString(16)}.txt",source.isLocal)
                 var sourceData: String? = null
                 try {
                     sourceData = fileCacheRepository.getOrRefresh(if (source.isLocal) Long.MAX_VALUE else cacheTime) {

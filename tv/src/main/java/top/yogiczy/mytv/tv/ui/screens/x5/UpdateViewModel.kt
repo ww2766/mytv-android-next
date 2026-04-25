@@ -138,6 +138,7 @@ class UpdateViewModel : ViewModel() {
         }
         if (retry<=0){
             _process="本次X5安装尝试失败。建议请在其他时间段再次尝试。"
+            return
         }
         val log=Logger.create("initX5WebViewCore：loadX5(context: Context)")
         var cb: PreInitCallback? =null

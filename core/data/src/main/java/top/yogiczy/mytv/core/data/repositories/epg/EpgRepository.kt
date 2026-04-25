@@ -107,7 +107,7 @@ class EpgRepository(
                 return@withContext EpgList()
             }
             val gList = mutableListOf<Epg>()
-            val urlList=xmlUrl.replace(';','#').replace(',','#').replace('$','#').replace('\n','#').split('#')
+            val urlList=xmlUrl.replace(';','\n').replace(',','\n').replace('$','\n').split('\n')
             urlList.forEach { item ->
                 val url=item.trim()
                 if(url.isEmpty())return@forEach

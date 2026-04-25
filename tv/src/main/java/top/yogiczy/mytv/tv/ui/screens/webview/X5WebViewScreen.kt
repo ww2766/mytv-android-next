@@ -1,26 +1,15 @@
 package top.yogiczy.mytv.tv.ui.screens.webview
 
 import android.annotation.SuppressLint
+import android.annotation.TargetApi
 import android.graphics.Bitmap
+import android.net.Uri
 import android.os.Build
-import android.os.SystemClock
-import android.view.KeyEvent
 import android.view.View
 import android.view.ViewGroup
-import android.webkit.JavascriptInterface
-import com.tencent.smtt.export.external.extension.proxy.ProxyWebChromeClientExtension
-import com.tencent.smtt.export.external.extension.proxy.ProxyWebViewClientExtension
-import com.tencent.smtt.export.external.interfaces.ConsoleMessage
-import com.tencent.smtt.export.external.interfaces.IX5WebChromeClient
-import com.tencent.smtt.export.external.interfaces.JsResult
-import com.tencent.smtt.sdk.WebChromeClient
-import com.tencent.smtt.sdk.WebSettings
-import com.tencent.smtt.sdk.WebView
-import com.tencent.smtt.sdk.WebViewClient
 import android.widget.FrameLayout
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -32,15 +21,25 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.viewinterop.AndroidView
 import com.tencent.smtt.export.external.extension.interfaces.IX5WebSettingsExtension
+import com.tencent.smtt.export.external.interfaces.ConsoleMessage
+import com.tencent.smtt.export.external.interfaces.IX5WebChromeClient
+import com.tencent.smtt.export.external.interfaces.JsResult
+import com.tencent.smtt.export.external.interfaces.WebResourceRequest
+import com.tencent.smtt.export.external.interfaces.WebResourceResponse
+import com.tencent.smtt.sdk.WebChromeClient
+import com.tencent.smtt.sdk.WebSettings
+import com.tencent.smtt.sdk.WebView
+import com.tencent.smtt.sdk.WebViewClient
 import top.yogiczy.mytv.core.data.network.WebViewUtils.updateWebViewProxy
 import top.yogiczy.mytv.core.data.utils.ChannelUtil
 import top.yogiczy.mytv.core.data.utils.Logger
-import java.lang.Thread.sleep
-
+import java.io.ByteArrayInputStream
 
 
 @SuppressLint("SetJavaScriptEnabled")
@@ -52,6 +51,7 @@ fun X5WebViewScreen(
 ) {
     val context = LocalContext.current
     val log= Logger.create("X5WebViewComponent")
+    val jsString=AssetUtil.readStringFromAssets(context,"auto_play_full_video.js")
     var webViewRef by remember { mutableStateOf<WebView?>(null) }
     var customView by remember { mutableStateOf<View?>(null) }
     var customViewCallback by remember { mutableStateOf<IX5WebChromeClient.CustomViewCallback?>(null) }
@@ -62,7 +62,8 @@ fun X5WebViewScreen(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(Color.Black),
+            .background(Color.Black)
+            .focusable(false)
     ) {
         AndroidView(
             factory = { ctx ->
@@ -98,312 +99,81 @@ fun X5WebViewScreen(
                     }
                     webViewClient = object : WebViewClient() {
                         override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
+                            super.onPageStarted(view, url, favicon)
+                            view?.evaluateJavascript(jsString.trimIndent(), null)
                         }
 
                         override fun onPageFinished(view: WebView?, url: String?) {
-                            view?.evaluateJavascript(
-                                """
- 
-    console.log('Plugin enter.');
-    ;(async () => {
-        console.log('Plugin enter.');
-        // 标记是否有用户交互
-        let userInteracted = false;
-
-        // 标记是否已绑定事件监听器
-        let isEventListenerBound = false;
-
-        //标记是否已页面全屏
-        let isInlineFullScreen =false;
-
-        // 初始化插件
-        function initPlugin() {
-          if (isEventListenerBound) {
-            return; // 如果已绑定，则不再重复绑定
-          }
-          var style = document.createElement('style');
-          style.type = 'text/css';
-          style.innerText = `.fullscreen-webview {
-                                position: fixed !important;
-                                top: 0 !important;
-                                left: 0 !important;
-                                width: 100vw !important;
-                                height: 100vh !important;
-                                z-index: 2147483646 !important;
-                                background-color: black !important;
-                              }
-                              .no-scroll-webview { overflow: hidden !important; }`;
-          document.head.appendChild(style);
-          // 监听键盘事件
-          document.addEventListener('keydown', handleKeyDown, true); // 使用捕获阶段
-          window.addEventListener('message', (e) => {
-            const iframe = e.source.frameElement;  
-            if (iframe && (e.data.action === 'iframeEnterFullscreen')) {
-              iframe.classList.add('fullscreen-webview');
-              document.body.classList.add('no-scroll-webview');
-              if(window.parent){
-                window.parent.postMessage(
-                  { action: 'iframeEnterFullscreen' }, 
-                );
-              }
-            } else if (e.data.action === 'iframeExitFullscreen') {
-              iframe.classList.remove('fullscreen-webview');
-              document.body.classList.remove('no-scroll-webview');
-            }
-          });
-          // 标记为已绑定
-          isEventListenerBound = true;
-          
-          console.log('Plugin initialized.');
-        }
-
-        // 处理键盘事件
-        function handleKeyDown(event) { 
-          // 检查事件目标是否为文本框
-          const isInputField = event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA';
-
-          // 按下 F 键且不在文本框内时触发播放并网页内全屏
-          if ((event.key === 'f' || event.key === 'F') && !isInputField) {
-            console.warn('handleKeyDown:'+event.key);
-            event.preventDefault(); // 阻止默认行为
-            userInteracted = true; 
-            handleStandardVideo(); 
-          }
-        }
-
-        function clickKeyCodeF()
-        {
-            if (userInteracted) {
-                return;
-            }
-            try{window.AndroidBridge.clickKeyCodeF(); }catch(ex){}
-            
-        }
-        function setVideoResolution(video)
-        { 
-            try{
-                if (video) { 
-                    window.AndroidBridge.changeVideoResolution(video.videoWidth, video.videoHeight);
-                }else{
-                    window.AndroidBridge.changeVideoResolution(1280, 720);
-                }
-            }catch(ex){}
-            
-        }
-        // 处理标准视频
-        function handleStandardVideo() {
-          console.warn('playAndFullScreen');
-          const video = document.querySelector('video');
-          if (video) {
-            playAndFullScreen(video);
-          } else {
-            console.warn('Video element not found!'); 
-          }
-          setVideoResolution(video);
-        }
-
-        // 播放并网页内全屏视频
-        function playAndFullScreen(video) {
-          console.warn('playAndFullScreen()');
-          if (userInteracted) {
-            // 如果视频未播放，先播放
-            if (video.paused) {
-              video.play().catch((err) => {
-                console.error('Failed to play video:', err);
-              });
-
-              // 监听播放事件，播放后网页内全屏
-              video.addEventListener('play', () => {
-                enterFullscreen(video);
-              }, { once: true }); // 只监听一次
-            } else {
-              // 如果视频已经在播放，直接网页内全屏
-              enterFullscreen(video);
-            }
-          } else {
-            console.warn('Play and fullscreen blocked: user interaction required.');
-            clickKeyCodeF();  
-          }
-        }
-      
-          
-        // 屏幕全屏
-        function enterFullscreen(video) {
-          if(userInteracted===false){
-            clickKeyCodeF(); 
-            setTimeout(() => {  enterFullscreen(video); }, 50); 
-            return;
-          } 
-          if (video.requestFullscreen) {
-            video.requestFullscreen().catch((err) => {
-              console.error('Failed to enter fullscreen:', err);
-            });
-          } else if (video.webkitRequestFullscreen) { // Safari 支持
-            video.webkitRequestFullscreen();
-          } else if (video.mozRequestFullScreen) { // Firefox 支持
-            video.mozRequestFullScreen();
-          } else if (video.msRequestFullscreen) { // IE/Edge 支持
-            video.msRequestFullscreen();
-          }else{
-            console.log('无法全屏，浏览器不允许');
-          }
-          video.muted=false;
-          video.volume =1
-          video.play();
-          userInteracted = false; // 重置用户交互标志
-          console.log('Entered inline fullscreen mode.');
-        }
-
-        // 网页内全屏
-        function enterInlineFullScreen(video) {
-          if(isInlineFullScreen===true){ 
-            return;
-          }  
-
-          clickKeyCodeF();   
-          let currentNode = video;
-          while (currentNode) { 
-            try {
-              // 清除内联样式和类
-              currentNode.style.cssText = '';
-              currentNode.className = '';
-              currentNode.style.position = 'fixed';
-              currentNode.style.left = '0';
-              currentNode.style.top = '0';
-              currentNode.style.margin = 0;
-              currentNode.style.padding = 0;
-              currentNode.style.zIndex = 2147483646; // 确保视频在最上层 
-              currentNode.style.width = '100%';
-              currentNode.style.height = '100%'; 
-              currentNode.style.objectFit = 'contain'; // 确保视频内容适应容器
-              currentNode.classList.add('fullscreen-webview');
-            } catch (error) {
-              
-            }
-            
-            currentNode = currentNode.parentNode;
-          }
-          isInnerFull=true 
-
-          //video.muted=false;
-          //video.volume =1
-          //video.play();
-          isInlineFullScreen = true; // 已经全屏 
-          if(window.parent){
-            window.parent.postMessage(
-              { action: 'iframeEnterFullscreen' }, 
-            );
-          }
-          
-        } 
-
-        function detectAndListenVideo(depth = 0) {
-          if (depth >= 5) {
-            console.warn('Maximum recursion depth reached.');
-            return;
-          }
-
-          // 检测当前文档中的视频
-          const videos = this.querySelectorAll('video');
-          videos.forEach((video) => { 
-            enterInlineFullScreen(video);  
-            if (!video.dataset.videoHandled) {
-              video.addEventListener('play', () => enterInlineFullScreen(video));
-              video.dataset.videoHandled = 'true';
-            }
-          });
-
-          // 检测 iframe
-          const iframes = this.querySelectorAll('iframe');
-          if (iframes.length > 5) {
-            console.warn('Too many iframes, skipping.');
-            return;
-          }
-
-          iframes.forEach((iframe) => {
-            const handleIframeLoad = () => {
-              try {
-                const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
-                if (iframeDoc) {
-                  detectAndListenVideo.call(iframeDoc, depth + 1);
-                }
-              } catch (err) {
-                console.warn('Cross-origin iframe blocked:', err);
-              }
-            };
-
-            if (iframe.contentDocument) {
-              handleIframeLoad();
-            } else {
-              iframe.addEventListener('load', handleIframeLoad);
-            }
-          });
-        }
-        
-
-
-        function handleAddedNode(node) {
-          if (node.nodeType !== Node.ELEMENT_NODE) return;
-        
-          // 检查当前节点是否是 VIDEO 或 IFRAME
-          if (node.tagName === 'VIDEO') { 
-              enterInlineFullScreen(node); 
-          } else if (node.tagName === 'IFRAME') {
-            try {
-              const doc = node.contentDocument;
-              if (doc) detectAndListenVideo.call(doc);
-            } catch (e) {
-              console.error('无法访问 IFRAME 内容:', e);
-            }
-          }
-        
-          // 递归处理子节点
-          node.childNodes.forEach(child => handleAddedNode(child));
-        }
-        // 在页面加载完成后初始化插件
-        function onPageLoad() {
-          
-          console.log('Page loaded, initializing plugin...');
-          initPlugin();
-        
-          // 创建 Mutation Observer 实例
-          const observer = new MutationObserver(function(mutations) {
-            mutations.forEach(function(mutation) {
-              // 检查是否有节点被添加
-              if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
-                mutation.addedNodes.forEach(function(node) {
-                  //console.log('MutationObserver:'+node.tagName+node.className);
-                  handleAddedNode(node); 
-                });
-              }
-            });
-          });
-        
-          // 配置 Mutation Observer
-          const config = { childList: true, subtree: true };
-        
-          // 开始监听目标元素
-          observer.observe(document.body, config);
-        
-          // 初次检测页面中的视频元素
-          detectAndListenVideo.call(document);
-        }
-        console.warn('监听页面加载事件');
-        // 监听页面加载事件
-        if (document.readyState === 'loading') { 
-          // 如果页面仍在加载，等待 DOMContentLoaded 事件
-          document.addEventListener('DOMContentLoaded', onPageLoad);
-        } else if(document.body!=null) {
-          // 如果页面已加载，直接初始化插件
-          onPageLoad();
-        }
-        console.warn('完成监听页面加载事件');
-      })()                                     
-                                """.trimIndent()
+                            /*view?.evaluateJavascript(
+                                jsString.trimIndent()
                             ) {
                                 //onPageFinished()
-                            }
+                            }*/
                             super.onPageFinished(view, url)
+                        }
+
+                        override fun shouldInterceptRequest(
+                            view: WebView?,
+                            request: WebResourceRequest?
+                        ): WebResourceResponse? {
+                            request?.url?.let {
+                                if (shouldBlockResource(it)) {
+                                    return emptyResponse()
+                                }
+                            }
+                            return super.shouldInterceptRequest(view, request)
+                        }
+
+                        override fun shouldInterceptRequest(
+                            view: WebView?,
+                            url: String?
+                        ): WebResourceResponse? {
+                            url?.let {
+                                if (shouldBlockResource(android.net.Uri.parse(it))) {
+                                    return emptyResponse()
+                                }
+                            }
+                            return super.shouldInterceptRequest(view, url)
+                        }
+                        private fun shouldBlockResource(uri: android.net.Uri): Boolean {
+                            val path = uri.lastPathSegment ?: return false
+                            return path.matches(Regex(".*\\.(jpg|png|webp|gif|bmp|svg)(\\?.*)?$"))
+                        }
+
+                        private fun emptyResponse(): WebResourceResponse {
+                            // 1x1像素透明GIF的字节数据（43字节）
+                            val smallestTransparentGif = byteArrayOf(
+                                0x47.toByte(), 0x49.toByte(), 0x46.toByte(), 0x38.toByte(), 0x39.toByte(), 0x61.toByte(), // GIF89a头
+                                0x01.toByte(), 0x00.toByte(), 0x01.toByte(), 0x00.toByte(), // 逻辑屏幕宽高1x1
+                                0xF0.toByte(),  // Packed Field: 1111 0000 (全局颜色表|颜色表大小2)
+                                0x00.toByte(),  // 背景色索引0
+                                0x00.toByte(),  // 像素宽高比
+                                // 全局颜色表（2个颜色）
+                                0x00.toByte(), 0x00.toByte(), 0x00.toByte(), // 颜色0（透明色）
+                                0xFF.toByte(), 0xFF.toByte(), 0xFF.toByte(), // 颜色1（实际不会显示）
+                                // 图形控制扩展
+                                0x21.toByte(), 0xF9.toByte(), 0x04.toByte(), // 扩展标签
+                                0x01.toByte(),  // 标志位（启用透明色）
+                                0x00.toByte(), 0x00.toByte(), // 延迟时间
+                                0x00.toByte(),  // 透明色索引0
+                                0x00.toByte(),  // 块终结符
+                                // 图像描述符
+                                0x2C.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(), 0x00.toByte(), // 位置
+                                0x01.toByte(), 0x00.toByte(), 0x01.toByte(), 0x00.toByte(), // 图像宽高
+                                0x00.toByte(),  // 无局部颜色表
+                                // 图像数据
+                                0x02.toByte(),  // LZW最小码长
+                                0x02.toByte(),  // 数据块长度
+                                0x14.toByte(), 0x01.toByte(), // LZW压缩数据（编码透明像素0x00）
+                                0x00.toByte(),  // 数据块终结
+                                0x3B.toByte()   // 文件结束
+                            )
+
+                            return WebResourceResponse(
+                                "image/gif",  // 修改MIME类型为图片格式
+                                null,         // 图片不需要字符编码
+                                ByteArrayInputStream(smallestTransparentGif)
+                            )
                         }
 
                     }
@@ -499,13 +269,15 @@ fun X5WebViewScreen(
 
             },
             modifier = Modifier
-                .fillMaxSize().alpha(
+                .fillMaxSize()
+                .alpha(
                     if (customView == null) {
                         0f
                     } else {
                         1f
                     }
-                ).focusable(false)
+                )
+                .focusable(false)
         )
         //WebViewCover()
         DisposableEffect(Unit) {

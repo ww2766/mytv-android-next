@@ -25,9 +25,11 @@ import androidx.media3.exoplayer.source.ProgressiveMediaSource
 import androidx.media3.exoplayer.util.EventLogger
 import androidx.media3.exoplayer.video.MediaCodecVideoRenderer
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import top.yogiczy.mytv.core.data.network.getProxyDataSourceFactory
 import top.yogiczy.mytv.core.data.utils.ChannelUtil
 import top.yogiczy.mytv.tv.ui.utils.Configs
@@ -141,20 +143,42 @@ class Media3VideoPlayer(
         }
     }
 
+//    private fun preparePlay(url: String, contentType: Int? = null) {
+//        val mediaSource = getMediaSource(url, contentType)
+//        val uri=Uri.parse(ChannelUtil.clearAllPrefixFromUrl(url))
+//        if (mediaSource != null) {
+//            contentTypeAttempts[contentType ?: Util.inferContentType(uri)] = true
+//            videoPlayer.setMediaSource(mediaSource)
+//            videoPlayer.prepare()
+//            videoPlayer.play()
+//            triggerPrepared()
+//        }
+//        updatePositionJob?.cancel()
+//        updatePositionJob = null
+//    }
     private fun preparePlay(url: String, contentType: Int? = null) {
-        val mediaSource = getMediaSource(url, contentType)
-        val uri=Uri.parse(ChannelUtil.clearAllPrefixFromUrl(url))
-        if (mediaSource != null) {
-            contentTypeAttempts[contentType ?: Util.inferContentType(uri)] = true
-            videoPlayer.setMediaSource(mediaSource)
-            videoPlayer.prepare()
-            videoPlayer.play()
-            triggerPrepared()
-        }
-        updatePositionJob?.cancel()
-        updatePositionJob = null
-    }
+        // 使用类级别的 coroutineScope 启动一个协程
+        coroutineScope.launch {
+            // 使用 withContext(Dispatchers.IO) 将耗时操作切换到后台 IO 线程
+            val mediaSource = withContext(Dispatchers.IO) {
+                // 这行代码现在安全地在后台线程执行
+                getMediaSource(url, contentType)
+            }
 
+            // withContext 执行完毕后，会自动切回原来的线程（通常是主线程）
+            // 现在可以安全地更新 UI 和播放器
+            val uri = Uri.parse(ChannelUtil.clearAllPrefixFromUrl(url))
+            if (mediaSource != null) {
+                contentTypeAttempts[contentType ?: Util.inferContentType(uri)] = true
+                videoPlayer.setMediaSource(mediaSource)
+                videoPlayer.prepare()
+                videoPlayer.play()
+                triggerPrepared()
+            }
+            updatePositionJob?.cancel()
+            updatePositionJob = null
+        }
+    }
     private val playerListener = object : Player.Listener {
         override fun onVideoSizeChanged(videoSize: VideoSize) {
             triggerResolution(videoSize.width, videoSize.height)

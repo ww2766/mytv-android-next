@@ -12,6 +12,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -28,6 +29,7 @@ fun Drawer(
     showProvider: () -> Boolean = { true },
     onDismissRequest: (() -> Unit)? = null,
     position: DrawerPosition = DrawerPosition.End,
+    containerColor: Color = MaterialTheme.colors.surfaceContainer,
     header: @Composable (() -> Unit)? = null,
     content: @Composable () -> Unit = {},
 ) {
@@ -58,8 +60,8 @@ fun Drawer(
                 .align(alignment)
                 .then(positionModifier)
                 .background(
-                    MaterialTheme.colors.surfaceContainer,
-                    MaterialTheme.shapes.large,
+                    color = containerColor,
+                    shape = MaterialTheme.shapes.large,
                 )
                 .padding(20.dp)
         ) {

@@ -25,10 +25,19 @@ object Constants {
     val IPTV_SOURCE_LIST = IptvSourceList(
         listOf(
             IptvSource(
-                name = "默认直播源",
-                url = "https://b.tpy.us.kg/common",
+                name = "WebView直播源",
+                url = "http://localhost:10481/web_view.txt",
             ),
-        )
+
+            IptvSource(
+                name = "通用直播源",
+                url = "https://on.mytv.cloudns.org/common",
+            ),
+            IptvSource(
+                name = "通用IPV6直播源",
+                url = "https://on.mytv.cloudns.org/ipv6",
+            ),
+            )
     )
 
     /**
@@ -61,15 +70,15 @@ object Constants {
      * Git最新版本信息
      */
     val GIT_RELEASE_LATEST_URL = mapOf(
-        "stable" to "https://ghp.ci/https://raw.githubusercontent.com/yaoxieyoulei/mytv-android-update/main/tv-stable.json",
-        "beta" to "https://ghp.ci/https://raw.githubusercontent.com/yaoxieyoulei/mytv-android-update/main/tv-beta.json",
+        "stable" to "https://on.mytv.cloudns.org/upgrade",
+        "beta" to "https://on.mytv.cloudns.org/upgrade-beta",
     )
 
     /**
      * GitHub加速代理地址
      */
-    const val GITHUB_PROXY = "https://ghp.ci/"
-
+    //const val GITHUB_PROXY = "https://ghp.ci/"
+    const val GITHUB_PROXY = ""
     /**
      * HTTP请求重试次数
      */

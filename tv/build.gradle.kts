@@ -25,7 +25,7 @@ android {
         }
 
         ndk {
-            abiFilters.addAll(listOf("armeabi-v7a", "arm64-v8a"))
+            abiFilters.addAll(listOf("armeabi","armeabi-v7a", "arm64-v8a"))
         }
     }
 
@@ -88,6 +88,8 @@ dependencies {
     implementation(libs.androidx.material3.android)
     implementation(libs.androidx.ui.android)
     implementation(libs.androidx.webkit)
+    implementation(libs.ui)
+    implementation(libs.androidx.lifecycle.viewmodel.ktx)
 
     // 播放器
     val mediaSettingsFile = file("../../media/core_settings.gradle")

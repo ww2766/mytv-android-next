@@ -30,6 +30,7 @@ import kotlinx.coroutines.flow.consumeAsFlow
 import kotlinx.coroutines.flow.debounce
 import top.yogiczy.mytv.tv.ui.material.ProgressBar
 import top.yogiczy.mytv.tv.ui.theme.MyTVTheme
+import top.yogiczy.mytv.tv.ui.utils.focusOnLaunchedSaveable
 import java.text.SimpleDateFormat
 import java.util.Locale
 import kotlin.math.max
@@ -88,6 +89,7 @@ fun VideoPlayerControllerPositionCtrl(
         )
 
         VideoPlayerControllerBtn(
+            modifier = Modifier.focusOnLaunchedSaveable(),
             imageVector = Icons.Default.ChevronRight,
             onSelect = { seekNext(1000L * 60 * 1) },
         )
