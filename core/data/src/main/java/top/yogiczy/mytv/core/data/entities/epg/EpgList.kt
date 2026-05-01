@@ -14,14 +14,9 @@ import top.yogiczy.mytv.core.data.entities.epg.Epg.Companion.recentProgramme
 data class EpgList(
     val value: List<Epg> = emptyList(),
 ) : List<Epg> by value {
-    companion object {
-        private val matchCache =
-            object : LinkedHashMap<String, Epg?>(128, 0.75f, true) {
-                override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Epg?>?): Boolean {
-                    return size > 1024
-                }
-            }
+    private val matchMap by lazy { associateBy { it.channel.lowercase() } }
 
+    companion object {
         fun EpgList.recentProgramme(channel: Channel): EpgProgrammeRecent? {
             if (isEmpty()) return null
 
@@ -31,13 +26,11 @@ data class EpgList(
         fun EpgList.match(channel: Channel): Epg? {
             if (isEmpty()) return null
 
-            return matchCache.getOrPut(channel.epgName) {
-                firstOrNull { epg -> epg.channel.equals(channel.epgName, ignoreCase = true) } ?: Epg()
-            }
+            return matchMap[channel.epgName.lowercase()]
         }
 
         fun clearCache() {
-            matchCache.clear()
+            // 已移除 matchCache，此方法保留为空以兼容调用
         }
 
         fun example(channelList: ChannelList): EpgList {

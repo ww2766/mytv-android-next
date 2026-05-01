@@ -9,7 +9,10 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.launch
+
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -32,7 +35,9 @@ fun SettingsCategoryVideoPlayer(
     updateViewModel: UpdateViewModel = viewModel(),
 ) {
     val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
     updateViewModel.checkUpdate(context)
+
     SettingsContentList(modifier) {
         item {
             SettingsListItem(
@@ -77,8 +82,11 @@ fun SettingsCategoryVideoPlayer(
                     headlineContent = "腾讯X5 WebView 安装",
                     supportingContent = updateViewModel.process,
                     onSelected = {
-                        updateViewModel.loadX5(context,20,null)
+                        coroutineScope.launch {
+                            updateViewModel.downloadAndUpdate(context)
+                        }
                     },
+
                 )
             }
             AnimatedVisibility(

@@ -20,15 +20,16 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import top.yogiczy.mytv.core.data.utils.Globals
 import top.yogiczy.mytv.core.util.utils.ApkInstaller
+
 import top.yogiczy.mytv.tv.ui.material.PopupContent
 import top.yogiczy.mytv.tv.ui.material.Snackbar
 import top.yogiczy.mytv.tv.ui.material.SnackbarType
 import top.yogiczy.mytv.tv.ui.screens.settings.SettingsViewModel
 import top.yogiczy.mytv.tv.ui.screens.x5.components.UpdateContent
 import top.yogiczy.mytv.tv.ui.utils.captureBackKey
-import java.io.File
+import top.yogiczy.mytv.tv.ui.utils.captureBackKey
+
 
 @Composable
 fun UpdateScreen(
@@ -37,7 +38,7 @@ fun UpdateScreen(
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
-    val latestFile = remember { File(Globals.cacheDir, "x5.tbs") }
+
 
     LaunchedEffect(Unit) {
         delay(3000)
@@ -69,9 +70,9 @@ fun UpdateScreen(
                 updateViewModel.visible = false
                 coroutineScope.launch(Dispatchers.IO) {
                     try {
-                        //updateViewModel.downloadAndUpdate(context,latestFile)
-                        updateViewModel.loadX5(context,20,null)
+                        updateViewModel.downloadAndUpdate(context)
                     } catch (ex: Exception) {
+
                         Snackbar.show(
                             ex.message.toString(),
                             type = SnackbarType.ERROR,

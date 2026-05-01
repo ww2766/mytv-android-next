@@ -19,6 +19,7 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -74,6 +75,10 @@ fun ClassicChannelItemList(
     inFavoriteModeProvider: () -> Boolean = { false },
     onUserAction: () -> Unit = {},
 ) {
+    val currentOnChannelSelected = rememberUpdatedState(onChannelSelected)
+    val currentOnChannelFavoriteToggle = rememberUpdatedState(onChannelFavoriteToggle)
+    val currentOnChannelFocused = rememberUpdatedState(onChannelFocused)
+
     val focusManager = LocalFocusManager.current
     val channelGroup = channelGroupProvider()
     val channelList = channelListProvider()
@@ -86,6 +91,10 @@ fun ClassicChannelItemList(
         mutableStateOf(
             if (hasFocused) channelList.firstOrNull() ?: Channel() else initialChannel
         )
+    }
+
+    val focusedChannelIdx by remember(channelList, focusedChannel) {
+        derivedStateOf { channelList.indexOf(focusedChannel) }
     }
 
     val onChannelFocusedDebounce = rememberDebounceState(wait = 100L) {
@@ -121,6 +130,9 @@ fun ClassicChannelItemList(
     }
 
     LazyColumn(
+        state = listState,
+        contentPadding = PaddingValues(8.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
         modifier = modifier
             .fillMaxHeight()
             .width(if (showChannelLogoProvider()) 280.dp else 220.dp)
@@ -128,12 +140,9 @@ fun ClassicChannelItemList(
             .ifElse(
                 LocalSettings.current.uiFocusOptimize,
                 Modifier.saveFocusRestorer {
-                    itemFocusRequesterList[channelList.indexOf(focusedChannel)]
+                    itemFocusRequesterList.getOrNull(focusedChannelIdx) ?: FocusRequester.Default
                 },
             ),
-        state = listState,
-        contentPadding = PaddingValues(8.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         itemsIndexed(channelList, key = { _, channel -> channel.hashCode() }) { index, channel ->
             val isSelected by remember { derivedStateOf { channel == focusedChannel } }
@@ -155,32 +164,36 @@ fun ClassicChannelItemList(
                             .focusRequester(lastFocusRequester)
                             .handleKeyEvents(onDown = { scrollToFirst() })
                     ),
-                channelProvider = { channel },
-                onChannelSelected = { onChannelSelected(channel) },
-                onChannelFavoriteToggle = {
-                    if (inFavoriteModeProvider()) {
-                        if (channelList.size == 1) {
-                            focusManager.moveFocus(FocusDirection.Left)
-                        } else if (channelList.first() == channel) {
-                            focusManager.moveFocus(FocusDirection.Down)
-                        } else if (channelList.last() == channel) {
-                            focusManager.moveFocus(FocusDirection.Up)
-                        } else {
-                            focusManager.moveFocus(FocusDirection.Down)
+                channel = channel,
+                onChannelSelected = remember(channel) { { currentOnChannelSelected.value(channel) } },
+                onChannelFavoriteToggle = remember(channel) {
+                    {
+                        if (inFavoriteModeProvider()) {
+                            if (channelList.size == 1) {
+                                focusManager.moveFocus(FocusDirection.Left)
+                            } else if (channelList.first() == channel) {
+                                focusManager.moveFocus(FocusDirection.Down)
+                            } else if (channelList.last() == channel) {
+                                focusManager.moveFocus(FocusDirection.Up)
+                            } else {
+                                focusManager.moveFocus(FocusDirection.Down)
+                            }
                         }
+                        currentOnChannelFavoriteToggle.value(channel)
                     }
-                    onChannelFavoriteToggle(channel)
                 },
-                onChannelFocused = {
-                    focusedChannel = channel
-                    onChannelFocusedDebounce.send()
+                onChannelFocused = remember(channel) {
+                    {
+                        focusedChannel = channel
+                        onChannelFocusedDebounce.send()
+                    }
                 },
-                recentEpgProgrammeProvider = { epgListProvider().recentProgramme(channel) },
+                epgList = epgListProvider(),
                 showEpgProgrammeProgressProvider = showEpgProgrammeProgressProvider,
                 focusRequesterProvider = { itemFocusRequesterList[index] },
                 initialFocusedProvider = { initialFocused },
                 onInitialFocused = { hasFocused = true },
-                isSelectedProvider = { isSelected },
+                isSelected = isSelected,
                 showChannelLogoProvider = showChannelLogoProvider,
             )
         }
@@ -190,20 +203,19 @@ fun ClassicChannelItemList(
 @Composable
 private fun ClassicChannelItem(
     modifier: Modifier = Modifier,
-    channelProvider: () -> Channel = { Channel() },
+    channel: Channel,
     showChannelLogoProvider: () -> Boolean = { false },
     onChannelSelected: () -> Unit = {},
     onChannelFavoriteToggle: () -> Unit = {},
     onChannelFocused: () -> Unit = {},
-    recentEpgProgrammeProvider: () -> EpgProgrammeRecent? = { null },
+    epgList: EpgList = EpgList(),
     showEpgProgrammeProgressProvider: () -> Boolean = { false },
     focusRequesterProvider: () -> FocusRequester = { FocusRequester() },
     initialFocusedProvider: () -> Boolean = { false },
     onInitialFocused: () -> Unit = {},
-    isSelectedProvider: () -> Boolean = { false },
+    isSelected: Boolean = false,
 ) {
-    val channel = channelProvider()
-    val nowEpgProgramme = recentEpgProgrammeProvider()?.now
+    val nowEpgProgramme = remember(channel, epgList) { epgList.recentProgramme(channel)?.now }
     val showEpgProgrammeProgress = showEpgProgrammeProgressProvider()
     val focusRequester = focusRequesterProvider()
 
@@ -250,7 +262,7 @@ private fun ClassicChannelItem(
                     selectedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
                     selectedContentColor = MaterialTheme.colorScheme.onSurface,
                 ),
-                selected = isSelectedProvider(),
+                selected = isSelected,
                 onClick = {},
                 headlineContent = {
                     Text(

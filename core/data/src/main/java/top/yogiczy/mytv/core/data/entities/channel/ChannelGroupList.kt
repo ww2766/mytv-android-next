@@ -9,6 +9,19 @@ import androidx.compose.runtime.Immutable
 data class ChannelGroupList(
     val value: List<ChannelGroup> = emptyList(),
 ) : List<ChannelGroup> by value {
+    val channelList: ChannelList by lazy {
+        ChannelList(value.flatMap { it.channelList })
+    }
+
+    private val channelIdxMap: Map<Channel, Int> by lazy {
+        channelList.withIndex().associate { it.value to it.index }
+    }
+
+    fun channelIdx(channel: Channel): Int = channelIdxMap[channel] ?: -1
+
+    fun channelGroupIdx(channel: Channel): Int =
+        value.indexOfFirst { group -> group.channelList.any { it == channel } }
+
     companion object {
         val EXAMPLE = ChannelGroupList(List(20) { groupIdx ->
             ChannelGroup(
@@ -23,14 +36,5 @@ data class ChannelGroupList(
                 )
             )
         })
-
-        fun ChannelGroupList.channelGroupIdx(channel: Channel) =
-            this.indexOfFirst { group -> group.channelList.any { it == channel } }
-
-        fun ChannelGroupList.channelIdx(channel: Channel) =
-            this.flatMap { it.channelList }.indexOfFirst { it == channel }
-
-        val ChannelGroupList.channelList: ChannelList
-            get() = ChannelList(this.asSequence().flatMap { it.channelList.asSequence() }.toList())
     }
 }

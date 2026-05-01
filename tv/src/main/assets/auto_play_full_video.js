@@ -176,7 +176,9 @@ console.log('Plugin enter.');
           // 清除内联样式和类
           //currentNode.style.cssText = '';
           //currentNode.className = '';
-          currentNode.classList.add('fullscreen-webview');
+          if (currentNode.classList) {
+            currentNode.classList.add('fullscreen-webview');
+          }
           currentNode.style = `z-index:${++zIdx} !important;
                             position: fixed !important;
                             top: 0 !important;
@@ -305,7 +307,7 @@ console.log('Plugin enter.');
       // 检查当前节点是否是 VIDEO 或 IFRAME
       if (node.tagName === 'VIDEO') {
         if (!node.dataset.videoHandled) {
-          node.addEventListener('play', enterInlineFullScreen(node));
+          node.addEventListener('play', () => enterInlineFullScreen(node));
           node.dataset.videoHandled = 'true';
         }
       } else if (node.tagName === 'IFRAME') {

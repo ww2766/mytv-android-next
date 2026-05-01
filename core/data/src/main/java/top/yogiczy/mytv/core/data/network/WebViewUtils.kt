@@ -109,10 +109,11 @@ object WebViewUtils : Loggable()  {
     }
 
     //private val EXECUTOR = Executor { command -> command.run() }
-    fun updateWebViewProxy(context: Context,url: String) {
+    fun updateWebViewProxy(context: Context, url: String) {
+        if (SP.proxyUri.isBlank()) return
         clearWebViewProxy()
-        var proxyUri: URL? =null
-        var uri: Uri? =null
+        var proxyUri: URL? = null
+        var uri: Uri? = null
         try {
             proxyUri = URL(SP.proxyUri)
             uri = Uri.parse(url)

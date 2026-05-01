@@ -50,15 +50,26 @@ fun MainScreen(
     val uiState by mainViewModel.uiState.collectAsState()
 
     when (val s = uiState) {
-        is MainUiState.Ready -> MainContent(
-            modifier = modifier,
-            channelGroupListProvider = { s.channelGroupList },
-            filteredChannelGroupListProvider = {
-                ChannelGroupList(s.channelGroupList.filter { it.name !in settingsViewModel.iptvChannelGroupHiddenList })
-            },
-            epgListProvider = { s.epgList },
-            onBackPressed = onBackPressed,
-        )
+        is MainUiState.Ready -> {
+            val channelGroupListProvider = remember(s.channelGroupList) { { s.channelGroupList } }
+            val filteredChannelGroupListProvider = remember(
+                s.channelGroupList,
+                settingsViewModel.iptvChannelGroupHiddenList
+            ) {
+                {
+                    ChannelGroupList(s.channelGroupList.filter { it.name !in settingsViewModel.iptvChannelGroupHiddenList })
+                }
+            }
+            val epgListProvider = remember(s.epgList) { { s.epgList } }
+
+            MainContent(
+                modifier = modifier,
+                channelGroupListProvider = channelGroupListProvider,
+                filteredChannelGroupListProvider = filteredChannelGroupListProvider,
+                epgListProvider = epgListProvider,
+                onBackPressed = onBackPressed,
+            )
+        }
 
         is MainUiState.Loading -> MainScreenSettingsWrapper(onBackPressed = onBackPressed) {
             MainScreenLoading(messageProvider = { s.message })

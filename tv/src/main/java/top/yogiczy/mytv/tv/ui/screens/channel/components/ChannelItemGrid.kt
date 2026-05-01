@@ -15,6 +15,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
@@ -48,6 +49,9 @@ fun ChannelItemGrid(
     onClose: () -> Unit = {},
     onUserAction: () -> Unit = {},
 ) {
+    val currentOnChannelSelected = rememberUpdatedState(onChannelSelected)
+    val currentOnChannelFavoriteToggle = rememberUpdatedState(onChannelFavoriteToggle)
+
     val gridSize = 6
     val currentChannel = currentChannelProvider()
 
@@ -101,10 +105,12 @@ fun ChannelItemGrid(
                     ),
                     channelProvider = { channel },
                     showChannelLogoProvider = showChannelLogoProvider,
-                    onChannelSelected = { onChannelSelected(channel) },
-                    onChannelFavoriteToggle = {
-                        key++
-                        onChannelFavoriteToggle(channel)
+                    onChannelSelected = remember(channel) { { currentOnChannelSelected.value(channel) } },
+                    onChannelFavoriteToggle = remember(channel) {
+                        {
+                            key++
+                            currentOnChannelFavoriteToggle.value(channel)
+                        }
                     },
                     recentEpgProgrammeProvider = { epgListProvider().recentProgramme(channel) },
                     showEpgProgrammeProgressProvider = showEpgProgrammeProgressProvider,

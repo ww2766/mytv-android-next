@@ -61,14 +61,24 @@ fun App(
     val configuration = LocalConfiguration.current
     val doubleBackPressedExitState = rememberDoubleBackPressedExitState()
 
-    CompositionLocalProvider(
-        LocalDensity provides Density(
-            density = LocalDensity.current.density * when (settingsViewModel.uiDensityScaleRatio) {
+    val localDensity = LocalDensity.current
+    val density = remember(
+        localDensity,
+        settingsViewModel.uiDensityScaleRatio,
+        settingsViewModel.uiFontScaleRatio,
+        configuration.screenWidthDp,
+    ) {
+        Density(
+            density = localDensity.density * when (settingsViewModel.uiDensityScaleRatio) {
                 0f -> configuration.screenWidthDp.toFloat() / 960
                 else -> settingsViewModel.uiDensityScaleRatio
             },
-            fontScale = LocalDensity.current.fontScale * settingsViewModel.uiFontScaleRatio,
-        ),
+            fontScale = localDensity.fontScale * settingsViewModel.uiFontScaleRatio,
+        )
+    }
+
+    CompositionLocalProvider(
+        LocalDensity provides density,
         LocalSettings provides LocalSettingsCurrent(
             uiFocusOptimize = settingsViewModel.uiFocusOptimize,
         ),

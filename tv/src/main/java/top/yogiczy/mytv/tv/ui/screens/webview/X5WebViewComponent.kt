@@ -207,15 +207,17 @@ fun X5WebViewComponent(
                                                                               let currentNode = video;
                                                                               while (currentNode) { 
                                                                                 try {
-                                                                                  currentNode.style.position = 'fixed';
-                                                                                  currentNode.style.left = '0';
-                                                                                  currentNode.style.top = '0';
-                                                                                  currentNode.style.margin = 0;
-                                                                                  currentNode.style.padding = 0;
-                                                                                  currentNode.style.zIndex = 2147483646; // 确保视频在最上层 
-                                                                                  currentNode.style.width = '100%';
-                                                                                  currentNode.style.height = '100%'; 
-                                                                                  currentNode.style.objectFit = 'cover'; // 确保视频内容适应容器
+                                                                                  if (currentNode.style) {
+                                                                                    currentNode.style.position = 'fixed';
+                                                                                    currentNode.style.left = '0';
+                                                                                    currentNode.style.top = '0';
+                                                                                    currentNode.style.margin = 0;
+                                                                                    currentNode.style.padding = 0;
+                                                                                    currentNode.style.zIndex = 2147483646; // 确保视频在最上层 
+                                                                                    currentNode.style.width = '100%';
+                                                                                    currentNode.style.height = '100%'; 
+                                                                                    currentNode.style.objectFit = 'cover'; // 确保视频内容适应容器
+                                                                                  }
                                                                                 } catch (error) {
                                                                                   
                                                                                 }
@@ -245,7 +247,7 @@ fun X5WebViewComponent(
                                                                               } else if (video.msRequestFullscreen) { // IE/Edge 支持
                                                                                 video.msRequestFullscreen();
                                                                               }
-
+                                                                
                                                                               userInteracted = false; // 重置用户交互标志
                                                                               console.log('Entered inline fullscreen mode.');
                                                                             }
@@ -273,8 +275,8 @@ fun X5WebViewComponent(
                                                                               video.style.width = '100%';
                                                                               video.style.height = '100%'; 
                                                                               video.style.objectFit = 'cover'; // 确保视频内容适应容器
-                                        
-                                        
+                                                                        
+                                                                        
                                                                               video.muted=false;
                                                                               video.volume =1
                                                                               video.play();

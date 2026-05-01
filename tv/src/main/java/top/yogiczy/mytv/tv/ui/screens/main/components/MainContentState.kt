@@ -15,8 +15,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import top.yogiczy.mytv.core.data.entities.channel.Channel
 import top.yogiczy.mytv.core.data.entities.channel.ChannelGroupList
-import top.yogiczy.mytv.core.data.entities.channel.ChannelGroupList.Companion.channelIdx
-import top.yogiczy.mytv.core.data.entities.channel.ChannelGroupList.Companion.channelList
 import top.yogiczy.mytv.core.data.entities.epg.EpgProgramme
 import top.yogiczy.mytv.core.data.entities.epg.EpgProgrammeReserve
 import top.yogiczy.mytv.core.data.entities.epg.EpgProgrammeReserveList
@@ -144,42 +142,50 @@ class MainContentState(
         }
     }
 
+    private var _favoriteChannelListCache = emptyList<Channel>()
+    private var _lastFavoriteChannelNameList = emptySet<String>()
+    private var _lastChannelList = emptyList<Channel>()
+
+    private fun getFavoriteChannelList(): List<Channel> {
+        val channelGroupList = channelGroupListProvider()
+        val favoriteChannelNameList = settingsViewModel.iptvChannelFavoriteList
+
+        if (_lastFavoriteChannelNameList != favoriteChannelNameList || _lastChannelList != channelGroupList.channelList) {
+            _favoriteChannelListCache =
+                channelGroupList.channelList.filter { it.name in favoriteChannelNameList }
+            _lastFavoriteChannelNameList = favoriteChannelNameList
+            _lastChannelList = channelGroupList.channelList
+        }
+        return _favoriteChannelListCache
+    }
+
     private fun getPrevFavoriteChannel(): Channel? {
         if (!settingsViewModel.iptvChannelFavoriteListVisible) return null
 
-        val channelGroupList = channelGroupListProvider()
-
-        val favoriteChannelNameList = settingsViewModel.iptvChannelFavoriteList
-        val favoriteChannelList =
-            channelGroupList.channelList.filter { it.name in favoriteChannelNameList }
+        val favoriteChannelList = getFavoriteChannelList()
 
         return if (_currentChannel in favoriteChannelList && _currentChannel != favoriteChannelList.first()) {
             val currentIdx = favoriteChannelList.indexOf(_currentChannel)
             favoriteChannelList[currentIdx - 1]
         } else if (settingsViewModel.iptvChannelFavoriteChangeBoundaryJumpOut) {
             settingsViewModel.iptvChannelFavoriteListVisible = false
-            channelGroupList.channelList.lastOrNull()
+            channelGroupListProvider().channelList.lastOrNull()
         } else {
             favoriteChannelList.lastOrNull()
         }
-
     }
 
     private fun getNextFavoriteChannel(): Channel? {
         if (!settingsViewModel.iptvChannelFavoriteListVisible) return null
 
-        val channelGroupList = channelGroupListProvider()
-
-        val favoriteChannelNameList = settingsViewModel.iptvChannelFavoriteList
-        val favoriteChannelList =
-            channelGroupList.channelList.filter { it.name in favoriteChannelNameList }
+        val favoriteChannelList = getFavoriteChannelList()
 
         return if (_currentChannel in favoriteChannelList && _currentChannel != favoriteChannelList.last()) {
             val currentIdx = favoriteChannelList.indexOf(_currentChannel)
             favoriteChannelList[currentIdx + 1]
         } else if (settingsViewModel.iptvChannelFavoriteChangeBoundaryJumpOut) {
             settingsViewModel.iptvChannelFavoriteListVisible = false
-            channelGroupList.channelList.firstOrNull()
+            channelGroupListProvider().channelList.firstOrNull()
         } else {
             favoriteChannelList.firstOrNull()
         }

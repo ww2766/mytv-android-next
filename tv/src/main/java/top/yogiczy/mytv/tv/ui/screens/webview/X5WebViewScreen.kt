@@ -85,7 +85,7 @@ fun X5WebViewScreen(
                     settings.builtInZoomControls = false
                     //settings.mixedContentMode = android.webkit.WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
                     settings.mediaPlaybackRequiresUserGesture = false
-                    settingsExtension.setPicModel(IX5WebSettingsExtension.PicModel_NoPic);
+                    settingsExtension?.setPicModel(IX5WebSettingsExtension.PicModel_NoPic)
 
                     layoutParams = params
                     setOnKeyListener { _, keyCode, event ->

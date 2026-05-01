@@ -74,7 +74,7 @@ androidx-media3-common-ktx = { group = "androidx.media3", name = "media3-common-
 androidx-webkit = { group = "androidx.webkit", name = "webkit", version.ref = "webkit" }
 webviewup-core = { module = "io.github.jonanorman.android.webviewup:core", version.ref = "webviewup-core" }
 webviewup-download-source = { module = "io.github.jonanorman.android.webviewup:download-source", version.ref = "webviewup-download-source" }
-tbs-tbssdk = { module = "com.tencent.tbs:tbssdk", version = "44153" }
+tbs-tbssdk = { module = "com.tencent.tbs:tbssdk", version = "44286" }
 androidx-material3-android = { group = "androidx.compose.material3", name = "material3-android", version.ref = "material3Android" }
 androidx-ui-android = { group = "androidx.compose.ui", name = "ui-android", version.ref = "uiAndroidVersion" }
 ui = { group = "androidx.compose.ui", name = "ui", version.ref = "ui" }
