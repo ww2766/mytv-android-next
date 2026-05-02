@@ -52,14 +52,13 @@ fun MainScreen(
     when (val s = uiState) {
         is MainUiState.Ready -> {
             val channelGroupListProvider = remember(s.channelGroupList) { { s.channelGroupList } }
-            val filteredChannelGroupListProvider = remember(
+            val filteredChannelGroupList = remember(
                 s.channelGroupList,
                 settingsViewModel.iptvChannelGroupHiddenList
             ) {
-                {
-                    ChannelGroupList(s.channelGroupList.filter { it.name !in settingsViewModel.iptvChannelGroupHiddenList })
-                }
+                ChannelGroupList(s.channelGroupList.filter { it.name !in settingsViewModel.iptvChannelGroupHiddenList })
             }
+            val filteredChannelGroupListProvider = remember(filteredChannelGroupList) { { filteredChannelGroupList } }
             val epgListProvider = remember(s.epgList) { { s.epgList } }
 
             MainContent(

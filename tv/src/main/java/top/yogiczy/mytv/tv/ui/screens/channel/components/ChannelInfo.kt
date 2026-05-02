@@ -71,7 +71,7 @@ fun ChannelInfo(
                 modifier = Modifier
                     .height(94.dp)
                     .aspectRatio(16 / 9f),
-                logoProvider = { channelProvider().logo },
+                logo = channelProvider().logo,
             )
         }
 

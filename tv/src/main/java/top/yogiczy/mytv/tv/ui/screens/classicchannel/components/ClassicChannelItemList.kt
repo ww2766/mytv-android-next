@@ -93,7 +93,7 @@ fun ClassicChannelItemList(
         )
     }
 
-    val focusedChannelIdx by remember(channelList, focusedChannel) {
+    val focusedChannelIdx by remember(channelList) {
         derivedStateOf { channelList.indexOf(focusedChannel) }
     }
 
@@ -150,19 +150,22 @@ fun ClassicChannelItemList(
                 derivedStateOf { !hasFocused && channel == initialChannel }
             }
 
+            val onUp = remember { { scrollToLast() } }
+            val onDown = remember { { scrollToFirst() } }
+
             ClassicChannelItem(
                 modifier = Modifier
                     .ifElse(
                         index == 0,
                         Modifier
                             .focusRequester(firstFocusRequester)
-                            .handleKeyEvents(onUp = { scrollToLast() })
+                            .handleKeyEvents(onUp = onUp)
                     )
                     .ifElse(
                         index == channelList.lastIndex,
                         Modifier
                             .focusRequester(lastFocusRequester)
-                            .handleKeyEvents(onDown = { scrollToFirst() })
+                            .handleKeyEvents(onDown = onDown)
                     ),
                 channel = channel,
                 onChannelSelected = remember(channel) { { currentOnChannelSelected.value(channel) } },
@@ -190,9 +193,9 @@ fun ClassicChannelItemList(
                 },
                 epgList = epgListProvider(),
                 showEpgProgrammeProgressProvider = showEpgProgrammeProgressProvider,
-                focusRequesterProvider = { itemFocusRequesterList[index] },
-                initialFocusedProvider = { initialFocused },
-                onInitialFocused = { hasFocused = true },
+                focusRequesterProvider = remember(index) { { itemFocusRequesterList[index] } },
+                initialFocusedProvider = remember(initialFocused) { { initialFocused } },
+                onInitialFocused = remember { { hasFocused = true } },
                 isSelected = isSelected,
                 showChannelLogoProvider = showChannelLogoProvider,
             )
@@ -240,7 +243,7 @@ private fun ClassicChannelItem(
             ) {
                 ChannelItemLogo(
                     modifier = Modifier.align(Alignment.Center),
-                    logoProvider = { channel.logo },
+                    logo = channel.logo,
                 )
             }
         }

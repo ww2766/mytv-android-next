@@ -42,48 +42,45 @@ class EpgRepository(
         xmlString: String,
         filteredChannels: List<String> = emptyList(),
     ) = withContext(Dispatchers.Default) {
+        val dateFormat = SimpleDateFormat("yyyyMMddHHmmss Z", Locale.getDefault())
         fun parseTime(time: String): Long {
             if (time.length < 14) return 0
-
-            return SimpleDateFormat("yyyyMMddHHmmss Z", Locale.getDefault())
-                .parse(time)?.time ?: 0
+            return dateFormat.parse(time)?.time ?: 0
         }
 
         val parser: XmlPullParser = Xml.newPullParser()
         parser.setFeature(XmlPullParser.FEATURE_PROCESS_NAMESPACES, false)
         parser.setInput(StringReader(xmlString))
 
-        val epgMap = mutableMapOf<String, Epg>()
+        val channelNameMap = mutableMapOf<String, String>()
+        val programmeMap = mutableMapOf<String, MutableList<EpgProgramme>>()
 
         var eventType = parser.eventType
         while (eventType != XmlPullParser.END_DOCUMENT) {
             when (eventType) {
                 XmlPullParser.START_TAG -> {
                     if (parser.name == "channel") {
-                        val channelId = parser.getAttributeValue(null, "id")
+                        val channelId = parser.getAttributeValue(null, "id") ?: continue
                         parser.nextTag()
                         val channelName = parser.nextText()
 
                         if (filteredChannels.isEmpty() || filteredChannels.contains(channelName.lowercase())) {
-                            epgMap[channelId] = Epg(channelName, EpgProgrammeList())
+                            channelNameMap[channelId] = channelName
+                            programmeMap[channelId] = mutableListOf()
                         }
                     } else if (parser.name == "programme") {
-                        val channelId = parser.getAttributeValue(null, "channel")
-                        val startTime = parser.getAttributeValue(null, "start")
-                        val stopTime = parser.getAttributeValue(null, "stop")
-                        parser.nextTag()
-                        val title = parser.nextText()
+                        val channelId = parser.getAttributeValue(null, "channel") ?: continue
+                        if (channelNameMap.containsKey(channelId)) {
+                            val startTime = parser.getAttributeValue(null, "start") ?: ""
+                            val stopTime = parser.getAttributeValue(null, "stop") ?: ""
+                            parser.nextTag()
+                            val title = parser.nextText()
 
-                        epgMap[channelId]?.let { epg ->
-                            epgMap[channelId] = epg.copy(
-                                programmeList = EpgProgrammeList(
-                                    epg.programmeList + listOf(
-                                        EpgProgramme(
-                                            startAt = parseTime(startTime),
-                                            endAt = parseTime(stopTime),
-                                            title = title,
-                                        )
-                                    )
+                            programmeMap[channelId]?.add(
+                                EpgProgramme(
+                                    startAt = parseTime(startTime),
+                                    endAt = parseTime(stopTime),
+                                    title = title,
                                 )
                             )
                         }
@@ -93,8 +90,12 @@ class EpgRepository(
             eventType = parser.next()
         }
 
-        log.i("解析节目单完成，共${epgMap.size}个频道，${epgMap.values.sumOf { it.programmeList.size }}个节目")
-        return@withContext EpgList(epgMap.values.toList())
+        val resultList = channelNameMap.map { (id, name) ->
+            Epg(name, EpgProgrammeList(programmeMap[id] ?: emptyList()))
+        }
+
+        log.i("解析节目单完成，共${resultList.size}个频道，${programmeMap.values.sumOf { it.size }}个节目")
+        return@withContext EpgList(resultList)
     }
     suspend fun getEpgList(
         filteredChannels: List<String> = emptyList(),
@@ -145,11 +146,9 @@ class EpgRepository(
                 }catch (_: Exception){}
             }
             val groupedItems = gList.groupBy { e->e.channel }
-                .flatMap { (_, itemsInCategory) -> // 使用 flatMap 展开
-                    val combinedValues = itemsInCategory.flatMap {ie-> ie.programmeList }.distinctBy() { p->p.startAt  }
-                    itemsInCategory.map { originalItem -> // 为每个原始 Item 创建新 Item
-                        Epg(originalItem.channel, EpgProgrammeList(combinedValues))
-                    }
+                .map { (channel, itemsInCategory) ->
+                    val combinedValues = itemsInCategory.flatMap {ie-> ie.programmeList }.distinctBy { p->p.startAt }
+                    Epg(channel, EpgProgrammeList(combinedValues))
                 }
             EpgList(groupedItems)
         } catch (ex: Exception) {

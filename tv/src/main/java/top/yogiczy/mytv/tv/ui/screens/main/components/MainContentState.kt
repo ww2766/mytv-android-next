@@ -11,6 +11,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import top.yogiczy.mytv.core.data.entities.channel.Channel
@@ -234,8 +235,11 @@ class MainContentState(
         _isTempChannelScreenVisible = true
 
         _currentChannel = channel
-        settingsViewModel.iptvLastChannelIdx =
-            channelGroupListProvider().channelIdx(_currentChannel)
+        // 将 SP 写入切换到 IO 线程执行，避免主线程被 SharedPreferences 阻塞
+        coroutineScope.launch(Dispatchers.IO) {
+            settingsViewModel.iptvLastChannelIdx =
+                channelGroupListProvider().channelIdx(_currentChannel)
+        }
 
         _currentChannelUrlIdx = getUrlIdx(_currentChannel.urlList, urlIdx)
 

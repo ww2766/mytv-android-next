@@ -19,8 +19,19 @@ data class ChannelGroupList(
 
     fun channelIdx(channel: Channel): Int = channelIdxMap[channel] ?: -1
 
-    fun channelGroupIdx(channel: Channel): Int =
-        value.indexOfFirst { group -> group.channelList.any { it == channel } }
+    private val channelGroupIdxMap: Map<Channel, Int> by lazy {
+        val map = mutableMapOf<Channel, Int>()
+        value.forEachIndexed { groupIdx, group ->
+            group.channelList.forEach { channel ->
+                if (!map.containsKey(channel)) {
+                    map[channel] = groupIdx
+                }
+            }
+        }
+        map
+    }
+
+    fun channelGroupIdx(channel: Channel): Int = channelGroupIdxMap[channel] ?: -1
 
     companion object {
         val EXAMPLE = ChannelGroupList(List(20) { groupIdx ->

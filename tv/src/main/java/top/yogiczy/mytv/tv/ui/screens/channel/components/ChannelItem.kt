@@ -94,22 +94,22 @@ fun ChannelItem(
                 ) {
                     ChannelItemLogo(
                         modifier = Modifier.align(Alignment.Center),
-                        logoProvider = { channelProvider().logo },
+                        logo = channelProvider().logo,
                     )
                 }
             }
 
             Box(modifier = Modifier.height(53.dp)) {
                 ChannelItemContent(
-                    channelProvider = channelProvider,
-                    recentEpgProgrammeProvider = recentEpgProgrammeProvider,
-                    isFocusedProvider = { isFocused },
+                    channel = channelProvider(),
+                    recentEpgProgramme = recentEpgProgrammeProvider(),
+                    isFocused = isFocused,
                 )
 
                 ChannelItemProgress(
-                    recentEpgProgrammeProvider = recentEpgProgrammeProvider,
-                    showEpgProgrammeProgressProvider = showEpgProgrammeProgressProvider,
-                    isFocusedProvider = { isFocused },
+                    recentEpgProgramme = recentEpgProgrammeProvider(),
+                    showEpgProgrammeProgress = showEpgProgrammeProgressProvider(),
+                    isFocused = isFocused,
                     modifier = Modifier.align(Alignment.BottomStart),
                 )
             }
@@ -120,13 +120,10 @@ fun ChannelItem(
 @Composable
 private fun ChannelItemContent(
     modifier: Modifier = Modifier,
-    channelProvider: () -> Channel = { Channel() },
-    recentEpgProgrammeProvider: () -> EpgProgrammeRecent? = { null },
-    isFocusedProvider: () -> Boolean = { false },
+    channel: Channel,
+    recentEpgProgramme: EpgProgrammeRecent?,
+    isFocused: Boolean,
 ) {
-    val channel = channelProvider()
-    val recentEpgProgramme = recentEpgProgrammeProvider()
-    val isFocused = isFocusedProvider()
 
     Column(
         modifier = modifier
@@ -154,14 +151,10 @@ private fun ChannelItemContent(
 @Composable
 private fun ChannelItemProgress(
     modifier: Modifier = Modifier,
-    recentEpgProgrammeProvider: () -> EpgProgrammeRecent? = { null },
-    showEpgProgrammeProgressProvider: () -> Boolean = { false },
-    isFocusedProvider: () -> Boolean = { false },
+    recentEpgProgramme: EpgProgrammeRecent?,
+    showEpgProgrammeProgress: Boolean,
+    isFocused: Boolean,
 ) {
-    val recentEpgProgramme = recentEpgProgrammeProvider()
-    val showEpgProgrammeProgress = showEpgProgrammeProgressProvider()
-    val isFocused = isFocusedProvider()
-
     recentEpgProgramme?.now?.let { nowProgramme ->
         if (showEpgProgrammeProgress) {
             Box(

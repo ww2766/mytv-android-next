@@ -10,6 +10,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
@@ -59,16 +60,18 @@ fun ChannelItemList(
         ),
         horizontalArrangement = Arrangement.spacedBy(20.dp),
     ) {
-        items(channelList) { channel ->
+        items(channelList, key = { it.name }) { channel ->
             ChannelItem(
-                channelProvider = { channel },
+                channelProvider = remember(channel) { { channel } },
                 showChannelLogoProvider = showChannelLogoProvider,
-                onChannelSelected = { onChannelSelected(channel) },
-                onChannelFavoriteToggle = { onChannelFavoriteToggle(channel) },
-                recentEpgProgrammeProvider = { epgListProvider().recentProgramme(channel) },
+                onChannelSelected = remember(channel) { { onChannelSelected(channel) } },
+                onChannelFavoriteToggle = remember(channel) { { onChannelFavoriteToggle(channel) } },
+                recentEpgProgrammeProvider = remember(channel) { { epgListProvider().recentProgramme(channel) } },
                 showEpgProgrammeProgressProvider = showEpgProgrammeProgressProvider,
-                initialFocusedProvider = { channel == currentChannel && !hasItemFocused },
-                onInitialFocused = { hasItemFocused = true },
+                initialFocusedProvider = remember(channel, currentChannel, hasItemFocused) {
+                    { channel == currentChannel && !hasItemFocused }
+                },
+                onInitialFocused = remember { { hasItemFocused = true } },
             )
         }
     }

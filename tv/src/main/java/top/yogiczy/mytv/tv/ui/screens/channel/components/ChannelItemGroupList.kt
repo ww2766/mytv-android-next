@@ -11,6 +11,9 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
@@ -55,13 +58,17 @@ fun ChannelItemGroupList(
             .collect { _ -> onUserAction() }
     }
 
+    val currentOnToFavorite by rememberUpdatedState(onToFavorite)
+    val onUp = remember { { currentOnToFavorite() } }
+
     LazyColumn(
         modifier = modifier,
         state = groupListState,
         verticalArrangement = Arrangement.spacedBy(20.dp),
         contentPadding = PaddingValues(bottom = childPadding.bottom),
     ) {
-        itemsIndexed(channelGroupList) { index, channelGroup ->
+
+        itemsIndexed(channelGroupList, key = { _, group -> group.name }) { index, channelGroup ->
             Row(
                 modifier = Modifier.padding(start = childPadding.start),
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -79,9 +86,9 @@ fun ChannelItemGroupList(
             ChannelItemList(
                 modifier = Modifier.ifElse(
                     index == 0,
-                    Modifier.handleKeyEvents(onUp = onToFavorite),
+                    Modifier.handleKeyEvents(onUp = onUp),
                 ),
-                channelListProvider = { channelGroup.channelList },
+                channelListProvider = remember(channelGroup) { { channelGroup.channelList } },
                 currentChannelProvider = currentChannelProvider,
                 showChannelLogoProvider = showChannelLogoProvider,
                 onChannelSelected = onChannelSelected,

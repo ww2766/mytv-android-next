@@ -5,8 +5,12 @@ import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.focus.FocusRequester
@@ -73,7 +77,6 @@ fun MainContent(
     epgListProvider: () -> EpgList = { EpgList() },
     settingsViewModel: SettingsViewModel = viewModel(),
 ) {
-    val log= Logger.create("MainContent")
     val coroutineScope = rememberCoroutineScope()
     val focusRequester = remember { FocusRequester() }
     val videoPlayerState =
@@ -82,6 +85,12 @@ fun MainContent(
         videoPlayerState = videoPlayerState,
         channelGroupListProvider = filteredChannelGroupListProvider,
     )
+    // 预计算收藏频道列表并缓存，避免每次重组时重新 filter
+    val favoriteChannelNameList = settingsViewModel.iptvChannelFavoriteList
+    val favoriteChannelList = remember(favoriteChannelNameList, filteredChannelGroupListProvider()) {
+        ChannelList(filteredChannelGroupListProvider().channelList
+            .filter { it.name in favoriteChannelNameList })
+    }
     val channelNumberSelectState = rememberChannelNumberSelectState {
         val idx = it.toInt() - 1
         filteredChannelGroupListProvider().channelList.getOrNull(idx)?.let { channel ->
@@ -134,13 +143,11 @@ fun MainContent(
                 urlProvider = { mainContentState.currentChannel.urlList[mainContentState.currentChannelUrlIdx] },
                 onVideoResolutionChanged = { width, height ->
                     if(width==-100){
-                        log.i("X5WebViewScreen onVideoResolutionChanged focusRequester.requestFocus() start")
                         coroutineScope.launch(Dispatchers.IO) {
-                            withContext(Dispatchers.Main) { // 切换回主线程
+                            withContext(Dispatchers.Main) {
                                 focusRequester.requestFocus()
                             }
                         }
-                        log.i("X5WebViewScreen onVideoResolutionChanged focusRequester.requestFocus() end")
                     }
                     else {
                         videoPlayerState.metadata = videoPlayerState.metadata.copy(
@@ -223,15 +230,8 @@ fun MainContent(
             .focusRequester(focusRequester)
             .focusable(true)
             .onFocusEvent { focusState ->
-                log.i("focusState.isFocused:"+focusState.isFocused.toString())
-                log.i("focusState.hasFocus:"+focusState.hasFocus.toString())
             if (!focusState.isFocused) {
-
-                // 3. 失去焦点时延迟 10ms 重新请求
-                //coroutineScope.launch {
-                //        delay(20)
-                //        focusRequester.requestFocus()
-                //    }
+                // 失去焦点时可按需重新请求
                 }
             }
     ) {
@@ -461,47 +461,60 @@ fun MainContent(
         )
     }
 
-    PopupContent(
-        visibleProvider = { mainContentState.isChannelScreenVisible && settingsViewModel.uiUseClassicPanelScreen },
-        onDismissRequest = { mainContentState.isChannelScreenVisible = false },
-    ) {
-        ClassicChannelScreen(
-            channelGroupListProvider = filteredChannelGroupListProvider,
-            currentChannelProvider = { mainContentState.currentChannel },
-            currentChannelUrlIdxProvider = { mainContentState.currentChannelUrlIdx },
-            favoriteChannelListProvider = {
-                val favoriteChannelNameList = settingsViewModel.iptvChannelFavoriteList
-                ChannelList(filteredChannelGroupListProvider().channelList
-                    .filter { favoriteChannelNameList.contains(it.name) })
-            },
-            showChannelLogoProvider = { settingsViewModel.uiShowChannelLogo },
-            onChannelSelected = {
-                mainContentState.isChannelScreenVisible = false
-                mainContentState.changeCurrentChannel(it)
-            },
-            onChannelFavoriteToggle = { mainContentState.favoriteChannelOrNot(it) },
-            epgListProvider = epgListProvider,
-            epgProgrammeReserveListProvider = {
-                EpgProgrammeReserveList(settingsViewModel.epgChannelReserveList)
-            },
-            showEpgProgrammeProgressProvider = { settingsViewModel.uiShowEpgProgrammeProgress },
-            supportPlaybackProvider = { mainContentState.supportPlayback(it, null) },
-            currentPlaybackEpgProgrammeProvider = { mainContentState.currentPlaybackEpgProgramme },
-            onEpgProgrammePlayback = { channel, programme ->
-                mainContentState.isChannelScreenVisible = false
-                mainContentState.changeCurrentChannel(channel, null, programme)
-            },
-            onEpgProgrammeReserve = { channel, programme ->
-                mainContentState.reverseEpgProgrammeOrNot(channel, programme)
-            },
-            videoPlayerMetadataProvider = { videoPlayerState.metadata },
-            channelFavoriteEnabledProvider = { settingsViewModel.iptvChannelFavoriteEnable },
-            channelFavoriteListVisibleProvider = { settingsViewModel.iptvChannelFavoriteListVisible },
-            onChannelFavoriteListVisibleChange = {
-                settingsViewModel.iptvChannelFavoriteListVisible = it
-            },
-            onClose = { mainContentState.isChannelScreenVisible = false },
-        )
+    // 经典选台界面：「预热组合」策略
+    // 应用就绪后在空闲帧就预先准备好组合树，第一次按键就能立即显示
+    var classicScreenEverShown by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        if (settingsViewModel.uiUseClassicPanelScreen) {
+            // 延迟 500ms，让主界面先完成首帧渲染，再在后台预热选台界面
+            delay(500)
+            classicScreenEverShown = true
+        }
+    }
+
+    if (mainContentState.isChannelScreenVisible && settingsViewModel.uiUseClassicPanelScreen) {
+        classicScreenEverShown = true
+    }
+    if (classicScreenEverShown && settingsViewModel.uiUseClassicPanelScreen) {
+        val isVisible = mainContentState.isChannelScreenVisible
+        PopupContent(
+            visibleProvider = { isVisible },
+            onDismissRequest = { mainContentState.isChannelScreenVisible = false },
+        ) {
+            ClassicChannelScreen(
+                channelGroupListProvider = filteredChannelGroupListProvider,
+                currentChannelProvider = { mainContentState.currentChannel },
+                currentChannelUrlIdxProvider = { mainContentState.currentChannelUrlIdx },
+                favoriteChannelListProvider = { favoriteChannelList },
+                showChannelLogoProvider = { settingsViewModel.uiShowChannelLogo },
+                onChannelSelected = {
+                    mainContentState.isChannelScreenVisible = false
+                    mainContentState.changeCurrentChannel(it)
+                },
+                onChannelFavoriteToggle = { mainContentState.favoriteChannelOrNot(it) },
+                epgListProvider = epgListProvider,
+                epgProgrammeReserveListProvider = {
+                    EpgProgrammeReserveList(settingsViewModel.epgChannelReserveList)
+                },
+                showEpgProgrammeProgressProvider = { settingsViewModel.uiShowEpgProgrammeProgress },
+                supportPlaybackProvider = { mainContentState.supportPlayback(it, null) },
+                currentPlaybackEpgProgrammeProvider = { mainContentState.currentPlaybackEpgProgramme },
+                onEpgProgrammePlayback = { channel, programme ->
+                    mainContentState.isChannelScreenVisible = false
+                    mainContentState.changeCurrentChannel(channel, null, programme)
+                },
+                onEpgProgrammeReserve = { channel, programme ->
+                    mainContentState.reverseEpgProgrammeOrNot(channel, programme)
+                },
+                videoPlayerMetadataProvider = { videoPlayerState.metadata },
+                channelFavoriteEnabledProvider = { settingsViewModel.iptvChannelFavoriteEnable },
+                channelFavoriteListVisibleProvider = { settingsViewModel.iptvChannelFavoriteListVisible },
+                onChannelFavoriteListVisibleChange = {
+                    settingsViewModel.iptvChannelFavoriteListVisible = it
+                },
+                onClose = { mainContentState.isChannelScreenVisible = false },
+            )
+        }
     }
 
     PopupContent(

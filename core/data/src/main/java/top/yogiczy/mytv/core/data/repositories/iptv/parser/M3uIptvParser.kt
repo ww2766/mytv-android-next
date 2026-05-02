@@ -12,11 +12,17 @@ import top.yogiczy.mytv.core.data.entities.channel.ChannelList
  */
 class M3uIptvParser : IptvParser {
 
+    companion object {
+        private val regexName = Regex("tvg-name=\"(.+?)\"")
+        private val regexGroup = Regex("group-title=\"(.+?)\"")
+        private val regexLogo = Regex("tvg-logo=\"(.+?)\"")
+    }
+
     override fun isSupport(url: String, data: String): Boolean {
         return data.startsWith("#EXTM3U")
     }
 
-    override suspend fun parse(data: String): MutableList<IptvParser.IptvResponseItem> = withContext(Dispatchers.Default) {// ChannelGroupList = withContext(Dispatchers.Default) {
+    override suspend fun parse(data: String): MutableList<IptvParser.IptvResponseItem> = withContext(Dispatchers.Default) {
         val lines = data.split("\r\n", "\n")
         val iptvList = mutableListOf<IptvParser.IptvResponseItem>()
 
@@ -24,11 +30,9 @@ class M3uIptvParser : IptvParser {
             if (!line.startsWith("#EXTINF")) return@forEachIndexed
 
             val name = line.split(",").last().trim()
-            val channelName = Regex("tvg-name=\"(.+?)\"").find(line)?.groupValues?.get(1)?.trim()
-                ?: name
-            val groupName = Regex("group-title=\"(.+?)\"").find(line)?.groupValues?.get(1)?.trim()
-                ?: "其他"
-            val logo = Regex("tvg-logo=\"(.+?)\"").find(line)?.groupValues?.get(1)?.trim()
+            val channelName = regexName.find(line)?.groupValues?.get(1)?.trim() ?: name
+            val groupName = regexGroup.find(line)?.groupValues?.get(1)?.trim() ?: "其他"
+            val logo = regexLogo.find(line)?.groupValues?.get(1)?.trim()
             val url = lines.getOrNull(index + 1)?.trim()
 
             url?.let {

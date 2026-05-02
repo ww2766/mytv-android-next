@@ -214,9 +214,9 @@ private fun ChannelScreenBottomChannelItemListAllAndFavorite(
             ChannelItemGrid(
                 title = "收藏",
                 channelListProvider = {
-                    val favoriteChannelNameList = channelFavoriteListProvider()
+                    val favoriteChannelNameSet = channelFavoriteListProvider().toSet()
                     ChannelList(channelGroupListProvider().channelList
-                        .filter { favoriteChannelNameList.contains(it.name) })
+                        .filter { favoriteChannelNameSet.contains(it.name) })
                 },
                 currentChannelProvider = currentChannelProvider,
                 showChannelLogoProvider = showChannelLogoProvider,
@@ -241,9 +241,9 @@ private fun ChannelScreenBottomChannelItemListAllAndFavorite(
                     onToFavorite = {
                         if (!channelFavoriteEnabledProvider()) return@ChannelItemGroupList
 
-                        val favoriteChannelNameList = channelFavoriteListProvider()
+                        val favoriteChannelNameSet = channelFavoriteListProvider().toSet()
                         val favoriteList = channelGroupListProvider().channelList
-                            .filter { favoriteChannelNameList.contains(it.name) }
+                            .filter { favoriteChannelNameSet.contains(it.name) }
 
                         if (favoriteList.isNotEmpty()) {
                             onChannelFavoriteListVisibleChange(true)
@@ -266,9 +266,9 @@ private fun ChannelScreenBottomChannelItemListAllAndFavorite(
                     onClose = {
                         if (!channelFavoriteEnabledProvider()) return@ChannelItemGrid
 
-                        val favoriteChannelNameList = channelFavoriteListProvider()
+                        val favoriteChannelNameSet = channelFavoriteListProvider().toSet()
                         val favoriteList = channelGroupListProvider().channelList
-                            .filter { favoriteChannelNameList.contains(it.name) }
+                            .filter { favoriteChannelNameSet.contains(it.name) }
 
                         if (favoriteList.isNotEmpty()) {
                             onChannelFavoriteListVisibleChange(true)

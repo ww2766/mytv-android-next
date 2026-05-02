@@ -7,11 +7,11 @@ import coil.compose.AsyncImage
 @Composable
 fun ChannelItemLogo(
     modifier: Modifier = Modifier,
-    logoProvider: () -> String?,
+    logo: String?,
 ) {
     AsyncImage(
         modifier = modifier,
-        model = logoProvider(),
+        model = logo,
         contentDescription = null,
     )
 }

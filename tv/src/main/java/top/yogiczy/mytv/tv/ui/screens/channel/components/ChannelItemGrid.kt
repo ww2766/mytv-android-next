@@ -85,6 +85,9 @@ fun ChannelItemGrid(
             )
         }
 
+        val currentOnClose by rememberUpdatedState(onClose)
+        val onUp = remember { { currentOnClose() } }
+
         LazyVerticalGrid(
             state = listState,
             columns = GridCells.Fixed(gridSize),
@@ -97,13 +100,14 @@ fun ChannelItemGrid(
                 bottom = childPadding.bottom,
             ),
         ) {
-            itemsIndexed(channelList) { index, channel ->
+
+            itemsIndexed(channelList, key = { _, channel -> channel.name }) { index, channel ->
                 ChannelItem(
                     modifier = Modifier.ifElse(
                         index < gridSize,
-                        Modifier.handleKeyEvents(onUp = onClose),
+                        Modifier.handleKeyEvents(onUp = onUp),
                     ),
-                    channelProvider = { channel },
+                    channelProvider = remember(channel) { { channel } },
                     showChannelLogoProvider = showChannelLogoProvider,
                     onChannelSelected = remember(channel) { { currentOnChannelSelected.value(channel) } },
                     onChannelFavoriteToggle = remember(channel) {
@@ -112,13 +116,15 @@ fun ChannelItemGrid(
                             currentOnChannelFavoriteToggle.value(channel)
                         }
                     },
-                    recentEpgProgrammeProvider = { epgListProvider().recentProgramme(channel) },
+                    recentEpgProgrammeProvider = remember(channel) { { epgListProvider().recentProgramme(channel) } },
                     showEpgProgrammeProgressProvider = showEpgProgrammeProgressProvider,
-                    initialFocusedProvider = {
-                        if (channelList.contains(currentChannel)) channel == currentChannel && !hasItemFocused
-                        else index == 0
+                    initialFocusedProvider = remember(channel, currentChannel, hasItemFocused) {
+                        {
+                            if (channelList.contains(currentChannel)) channel == currentChannel && !hasItemFocused
+                            else index == 0
+                        }
                     },
-                    onInitialFocused = { hasItemFocused = true },
+                    onInitialFocused = remember { { hasItemFocused = true } },
                 )
             }
         }
