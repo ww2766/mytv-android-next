@@ -108,42 +108,22 @@ class EpgRepository(
                 return@withContext EpgList()
             }
             val gList = mutableListOf<Epg>()
-            val urlList=xmlUrl.replace(';','\n').replace(',','\n').replace('$','\n').split('\n')
-            urlList.forEach { item ->
-                val url=item.trim()
-                if(url.isEmpty())return@forEach
-                val fileCacheRepository=EpgXmlRepository("epg-${url.hashCode().toUInt().toString(16)}-${SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(System.currentTimeMillis())}")
-                val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-
-                val xmlJson = fileCacheRepository.getOrRefresh({ lastModified, _ ->
-                    dateFormat.format(System.currentTimeMillis()) != dateFormat.format(lastModified)
-                }) {
-                    val xmlString = fileCacheRepository.getEpgXml(xmlUrl)
-                    Json.encodeToString(parseFromXml(xmlString, filteredChannels.map { it.lowercase() }).value)
-                }
-
-
-            }
             val epgFiles = Globals.cacheDir.listFiles { pathname ->
                 pathname.isFile && pathname.name.startsWith("epg-")
             }
 
             epgFiles?.forEach { file ->
-                if(System.currentTimeMillis() - file.lastModified()>7*24*3600*1000)
-                {
-                    try {
-                        file.delete()
-                    } catch (ex: Exception) {
-                        ex.printStackTrace()
-                    }
+                // 清理超过 7 天的旧缓存
+                if (System.currentTimeMillis() - file.lastModified() > 7 * 24 * 3600 * 1000) {
+                    try { file.delete() } catch (_: Exception) {}
                     return@forEach
                 }
-                println(file.absolutePath)
-                val fileCacheRepository=EpgXmlRepository(file.name)
+
+                val fileCacheRepository = EpgXmlRepository(file.name)
                 val xmlJson = fileCacheRepository.getCacheData()
                 try {
                     xmlJson?.let { Json.decodeFromString<List<Epg>>(it) }?.let { gList.addAll(it) }
-                }catch (_: Exception){}
+                } catch (_: Exception) {}
             }
             val groupedItems = gList.groupBy { e->e.channel }
                 .map { (channel, itemsInCategory) ->

@@ -66,6 +66,7 @@ fun ClassicChannelItemList(
     channelGroupProvider: () -> ChannelGroup = { ChannelGroup() },
     channelListProvider: () -> ChannelList = { ChannelList() },
     initialChannelProvider: () -> Channel = { Channel() },
+    initialChannelIdxProvider: () -> Int = { -1 },
     showChannelLogoProvider: () -> Boolean = { false },
     onChannelSelected: (Channel) -> Unit = {},
     onChannelFavoriteToggle: (Channel) -> Unit = {},
@@ -86,15 +87,19 @@ fun ClassicChannelItemList(
     val itemFocusRequesterList =
         remember(channelList) { List(channelList.size) { FocusRequester() } }
 
-    var hasFocused by rememberSaveable { mutableStateOf(!channelList.contains(initialChannel)) }
+    val initialChannelIdx = initialChannelIdxProvider()
+    var hasFocused by rememberSaveable { mutableStateOf(initialChannelIdx == -1) }
     var focusedChannel by remember(channelList) {
         mutableStateOf(
             if (hasFocused) channelList.firstOrNull() ?: Channel() else initialChannel
         )
     }
 
-    val focusedChannelIdx by remember(channelList) {
-        derivedStateOf { channelList.indexOf(focusedChannel) }
+    val focusedChannelIdx by remember(channelList, initialChannelIdx) {
+        derivedStateOf { 
+            if (!hasFocused && initialChannelIdx != -1) initialChannelIdx
+            else channelList.indexOf(focusedChannel) 
+        }
     }
 
     val onChannelFocusedDebounce = rememberDebounceState(wait = 100L) {
@@ -104,7 +109,7 @@ fun ClassicChannelItemList(
     val listState = remember(channelGroup) {
         LazyListState(
             if (hasFocused) 0
-            else max(0, channelList.indexOf(initialChannel) - 2)
+            else max(0, initialChannelIdx - 2)
         )
     }
     LaunchedEffect(listState) {
@@ -305,6 +310,7 @@ private fun ClassicChannelItemListPreview() {
             ClassicChannelItemList(
                 channelListProvider = { ChannelList.EXAMPLE },
                 initialChannelProvider = { ChannelList.EXAMPLE.first() },
+                initialChannelIdxProvider = { 0 },
                 epgListProvider = { EpgList.example(ChannelList.EXAMPLE) },
                 showEpgProgrammeProgressProvider = { true },
             )
@@ -320,6 +326,7 @@ private fun ClassicChannelItemListWithChannelLogoPreview() {
             ClassicChannelItemList(
                 channelListProvider = { ChannelList.EXAMPLE },
                 initialChannelProvider = { ChannelList.EXAMPLE.first() },
+                initialChannelIdxProvider = { 0 },
                 epgListProvider = { EpgList.example(ChannelList.EXAMPLE) },
                 showEpgProgrammeProgressProvider = { true },
                 showChannelLogoProvider = { true },

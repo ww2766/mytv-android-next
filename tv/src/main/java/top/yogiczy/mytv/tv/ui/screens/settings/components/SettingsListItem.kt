@@ -26,16 +26,19 @@ import top.yogiczy.mytv.tv.ui.material.SimplePopup
 import top.yogiczy.mytv.tv.ui.theme.MyTVTheme
 import top.yogiczy.mytv.tv.ui.utils.handleKeyEvents
 
+/**
+ * 稳定化版本（Provider 模式）
+ */
 @Composable
 fun SettingsListItem(
     modifier: Modifier = Modifier,
-    headlineContent: String,
-    supportingContent: String? = null,
-    trailingContent: @Composable () -> Unit = {},
-    trailingIcon: ImageVector? = null,
+    headlineContentProvider: () -> String,
+    supportingContentProvider: (() -> String?)? = null,
+    trailingContentProvider: @Composable () -> Unit = {},
+    trailingIconProvider: (() -> ImageVector?)? = null,
     onSelected: (() -> Unit)? = null,
     onLongSelected: () -> Unit = {},
-    locK: Boolean = false,
+    locKProvider: () -> Boolean = { false },
     remoteConfig: Boolean = false,
 ) {
     val popupManager = LocalPopupManager.current
@@ -46,18 +49,18 @@ fun SettingsListItem(
     ListItem(
         selected = false,
         onClick = {},
-        headlineContent = { Text(text = headlineContent) },
+        headlineContent = { Text(text = headlineContentProvider()) },
         trailingContent = {
             Row(
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
                 verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
             ) {
-                trailingContent()
-                trailingIcon?.let {
+                trailingContentProvider()
+                trailingIconProvider?.invoke()?.let {
                     Icon(it, contentDescription = null, modifier = Modifier.size(16.dp))
                 }
 
-                if (locK) {
+                if (locKProvider()) {
                     Icon(
                         Icons.Default.Lock,
                         contentDescription = null,
@@ -74,7 +77,7 @@ fun SettingsListItem(
                 }
             }
         },
-        supportingContent = { supportingContent?.let { Text(it) } },
+        supportingContent = { supportingContentProvider?.invoke()?.let { Text(it) } },
         modifier = modifier
             .focusRequester(focusRequester)
             .handleKeyEvents(
@@ -97,6 +100,37 @@ fun SettingsListItem(
     }
 }
 
+/**
+ * 兼容旧版本的重载 (支持 String 和 Composable trailingContent)
+ */
+@Composable
+fun SettingsListItem(
+    modifier: Modifier = Modifier,
+    headlineContent: String,
+    supportingContent: String? = null,
+    trailingContent: @Composable () -> Unit = {},
+    trailingIcon: ImageVector? = null,
+    onSelected: (() -> Unit)? = null,
+    onLongSelected: () -> Unit = {},
+    locK: Boolean = false,
+    remoteConfig: Boolean = false,
+) {
+    SettingsListItem(
+        modifier = modifier,
+        headlineContentProvider = { headlineContent },
+        supportingContentProvider = { supportingContent },
+        trailingContentProvider = trailingContent,
+        trailingIconProvider = { trailingIcon },
+        onSelected = onSelected,
+        onLongSelected = onLongSelected,
+        locKProvider = { locK },
+        remoteConfig = remoteConfig,
+    )
+}
+
+/**
+ * 兼容旧版本的重载 (支持 String trailingContent)
+ */
 @Composable
 fun SettingsListItem(
     modifier: Modifier = Modifier,

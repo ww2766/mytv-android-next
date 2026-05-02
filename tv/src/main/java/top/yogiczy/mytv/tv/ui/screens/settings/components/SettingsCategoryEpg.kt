@@ -11,6 +11,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.tv.material3.Switch
+import androidx.tv.material3.Text
 import kotlinx.coroutines.launch
 import top.yogiczy.mytv.core.data.entities.epgsource.EpgSourceList
 import top.yogiczy.mytv.core.data.repositories.epg.EpgRepository
@@ -28,12 +29,12 @@ fun SettingsCategoryEpg(
     val coroutineScope = rememberCoroutineScope()
 
     SettingsContentList(modifier) {
-        item {
+        item(key = "epgEnable") {
             SettingsListItem(
                 modifier = Modifier.focusRequester(it),
-                headlineContent = "节目单启用",
-                supportingContent = "首次加载时可能会较为缓慢",
-                trailingContent = {
+                headlineContentProvider = { "节目单启用" },
+                supportingContentProvider = { "首次加载时可能会较为缓慢" },
+                trailingContentProvider = {
                     Switch(settingsViewModel.epgEnable, null)
                 },
                 onSelected = {
@@ -42,16 +43,16 @@ fun SettingsCategoryEpg(
             )
         }
 
-        item {
+        item(key = "epgRefreshTimeThreshold") {
             val popupManager = LocalPopupManager.current
             val focusRequester = remember { FocusRequester() }
             var visible by remember { mutableStateOf(false) }
 
             SettingsListItem(
                 modifier = Modifier.focusRequester(focusRequester),
-                headlineContent = "节目单刷新时间阈值",
-                supportingContent = "时间不到${settingsViewModel.epgRefreshTimeThreshold}:00节目单将不会刷新",
-                trailingContent = "${settingsViewModel.epgRefreshTimeThreshold}:00",
+                headlineContentProvider = { "节目单刷新时间阈值" },
+                supportingContentProvider = { "时间不到${settingsViewModel.epgRefreshTimeThreshold}:00节目单将不会刷新" },
+                trailingContentProvider = { Text("${settingsViewModel.epgRefreshTimeThreshold}:00") },
                 onSelected = {
                     popupManager.push(focusRequester, true)
                     visible = true
@@ -73,16 +74,15 @@ fun SettingsCategoryEpg(
             )
         }
 
-        item {
+        item(key = "epgSourceCurrent") {
             val popupManager = LocalPopupManager.current
             val focusRequester = remember { FocusRequester() }
-            val currentEpgSource = settingsViewModel.epgSourceCurrent
             var isEpgSourceScreenVisible by remember { mutableStateOf(false) }
 
             SettingsListItem(
                 modifier = Modifier.focusRequester(focusRequester),
-                headlineContent = "自定义节目单",
-                trailingContent = currentEpgSource.name,
+                headlineContentProvider = { "自定义节目单" },
+                trailingContentProvider = { Text(settingsViewModel.epgSourceCurrent.name) },
                 onSelected = {
                     popupManager.push(focusRequester, true)
                     isEpgSourceScreenVisible = true

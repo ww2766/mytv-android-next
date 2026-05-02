@@ -43,6 +43,9 @@ class MainContentState(
     private var _currentChannel by mutableStateOf(Channel())
     val currentChannel get() = _currentChannel
 
+    private var _currentChannelIdx by mutableIntStateOf(0)
+    val currentChannelIdx get() = _currentChannelIdx
+
     private var _currentChannelUrlIdx by mutableIntStateOf(0)
     val currentChannelUrlIdx get() = _currentChannelUrlIdx
 
@@ -235,6 +238,8 @@ class MainContentState(
         _isTempChannelScreenVisible = true
 
         _currentChannel = channel
+        _currentChannelIdx = channelGroupListProvider().channelIdx(_currentChannel)
+
         // 将 SP 写入切换到 IO 线程执行，避免主线程被 SharedPreferences 阻塞
         coroutineScope.launch(Dispatchers.IO) {
             settingsViewModel.iptvLastChannelIdx =

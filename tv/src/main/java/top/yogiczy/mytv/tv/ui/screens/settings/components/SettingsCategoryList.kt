@@ -6,11 +6,13 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.delay
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
@@ -78,6 +80,14 @@ private fun SettingsCategoryItem(
     val focusRequester = remember { FocusRequester() }
     var isFocused by remember { mutableStateOf(false) }
 
+    LaunchedEffect(isFocused) {
+        if (isFocused) {
+            // 极短的延迟，确保只有真正停下的焦点才触发选中逻辑
+            delay(50)
+            onCategorySelected()
+        }
+    }
+
     ListItem(
         colors = ListItemDefaults.colors(
             selectedContainerColor = MaterialTheme.colorScheme.inverseSurface.copy(0.1f),
@@ -91,7 +101,6 @@ private fun SettingsCategoryItem(
             .focusRequester(focusRequester)
             .onFocusChanged {
                 isFocused = it.isFocused || it.hasFocus
-                if (isFocused) onCategorySelected()
             }
             .handleKeyEvents(
                 isFocused = { isFocused },

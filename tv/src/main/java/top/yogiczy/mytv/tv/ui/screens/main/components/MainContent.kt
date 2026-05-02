@@ -484,6 +484,7 @@ fun MainContent(
             ClassicChannelScreen(
                 channelGroupListProvider = filteredChannelGroupListProvider,
                 currentChannelProvider = { mainContentState.currentChannel },
+                currentChannelIdxProvider = { mainContentState.currentChannelIdx },
                 currentChannelUrlIdxProvider = { mainContentState.currentChannelUrlIdx },
                 favoriteChannelListProvider = { favoriteChannelList },
                 showChannelLogoProvider = { settingsViewModel.uiShowChannelLogo },

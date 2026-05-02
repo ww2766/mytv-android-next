@@ -10,6 +10,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.tv.material3.Switch
+import androidx.tv.material3.Text
 import top.yogiczy.mytv.core.data.utils.Constants
 import top.yogiczy.mytv.core.util.utils.humanizeMs
 import top.yogiczy.mytv.tv.ui.material.LocalPopupManager
@@ -24,12 +25,12 @@ fun SettingsCategoryUI(
     settingsViewModel: SettingsViewModel = viewModel(),
 ) {
     SettingsContentList(modifier) {
-        item {
+        item(key = "uiShowEpgProgrammeProgress") {
             SettingsListItem(
                 modifier = Modifier.focusRequester(it),
-                headlineContent = "节目进度",
-                supportingContent = "在频道项底部显示当前节目进度条",
-                trailingContent = {
+                headlineContentProvider = { "节目进度" },
+                supportingContentProvider = { "在频道项底部显示当前节目进度条" },
+                trailingContentProvider = {
                     Switch(settingsViewModel.uiShowEpgProgrammeProgress, null)
                 },
                 onSelected = {
@@ -39,11 +40,11 @@ fun SettingsCategoryUI(
             )
         }
 
-        item {
+        item(key = "uiShowEpgProgrammePermanentProgress") {
             SettingsListItem(
-                headlineContent = "常驻底部节目进度",
-                supportingContent = "在播放器底部显示当前节目进度条",
-                trailingContent = {
+                headlineContentProvider = { "常驻底部节目进度" },
+                supportingContentProvider = { "在播放器底部显示当前节目进度条" },
+                trailingContentProvider = {
                     Switch(settingsViewModel.uiShowEpgProgrammePermanentProgress, null)
                 },
                 onSelected = {
@@ -53,10 +54,10 @@ fun SettingsCategoryUI(
             )
         }
 
-        item {
+        item(key = "uiShowChannelLogo") {
             SettingsListItem(
-                headlineContent = "台标显示",
-                trailingContent = {
+                headlineContentProvider = { "台标显示" },
+                trailingContentProvider = {
                     Switch(settingsViewModel.uiShowChannelLogo, null)
                 },
                 onSelected = {
@@ -65,11 +66,11 @@ fun SettingsCategoryUI(
             )
         }
 
-        item {
+        item(key = "uiUseClassicPanelScreen") {
             SettingsListItem(
-                headlineContent = "经典选台界面",
-                supportingContent = "将选台界面替换为经典三段式结构",
-                trailingContent = {
+                headlineContentProvider = { "经典选台界面" },
+                supportingContentProvider = { "将选台界面替换为经典三段式结构" },
+                trailingContentProvider = {
                     Switch(settingsViewModel.uiUseClassicPanelScreen, null)
                 },
                 onSelected = {
@@ -79,22 +80,27 @@ fun SettingsCategoryUI(
             )
         }
 
-        item {
+        item(key = "uiTimeShowMode") {
             val timeShowRangeSeconds = Constants.UI_TIME_SCREEN_SHOW_DURATION / 1000
 
             SettingsListItem(
-                headlineContent = "时间显示",
-                supportingContent = when (settingsViewModel.uiTimeShowMode) {
-                    Configs.UiTimeShowMode.HIDDEN -> "不显示时间"
-                    Configs.UiTimeShowMode.ALWAYS -> "总是显示时间"
-                    Configs.UiTimeShowMode.EVERY_HOUR -> "整点前后${timeShowRangeSeconds}s显示时间"
-                    Configs.UiTimeShowMode.HALF_HOUR -> "半点前后${timeShowRangeSeconds}s显示时间"
+                headlineContentProvider = { "时间显示" },
+                supportingContentProvider = {
+                    when (settingsViewModel.uiTimeShowMode) {
+                        Configs.UiTimeShowMode.HIDDEN -> "不显示时间"
+                        Configs.UiTimeShowMode.ALWAYS -> "总是显示时间"
+                        Configs.UiTimeShowMode.EVERY_HOUR -> "整点前后${timeShowRangeSeconds}s显示时间"
+                        Configs.UiTimeShowMode.HALF_HOUR -> "半点前后${timeShowRangeSeconds}s显示时间"
+                    }
                 },
-                trailingContent = when (settingsViewModel.uiTimeShowMode) {
-                    Configs.UiTimeShowMode.HIDDEN -> "隐藏"
-                    Configs.UiTimeShowMode.ALWAYS -> "常显"
-                    Configs.UiTimeShowMode.EVERY_HOUR -> "整点"
-                    Configs.UiTimeShowMode.HALF_HOUR -> "半点"
+                trailingContentProvider = {
+                    val text = when (settingsViewModel.uiTimeShowMode) {
+                        Configs.UiTimeShowMode.HIDDEN -> "隐藏"
+                        Configs.UiTimeShowMode.ALWAYS -> "常显"
+                        Configs.UiTimeShowMode.EVERY_HOUR -> "整点"
+                        Configs.UiTimeShowMode.HALF_HOUR -> "半点"
+                    }
+                    Text(text)
                 },
                 onSelected = {
                     settingsViewModel.uiTimeShowMode =
@@ -105,16 +111,18 @@ fun SettingsCategoryUI(
             )
         }
 
-        item {
+        item(key = "uiScreenAutoCloseDelay") {
             val popupManager = LocalPopupManager.current
             val focusRequester = remember { FocusRequester() }
             var visible by remember { mutableStateOf(false) }
 
             SettingsListItem(
                 modifier = Modifier.focusRequester(focusRequester),
-                headlineContent = "超时自动关闭界面",
-                supportingContent = "影响选台界面，快捷操作等界面",
-                trailingContent = settingsViewModel.uiScreenAutoCloseDelay.humanizeMs(),
+                headlineContentProvider = { "超时自动关闭界面" },
+                supportingContentProvider = { "影响选台界面，快捷操作等界面" },
+                trailingContentProvider = {
+                    Text(settingsViewModel.uiScreenAutoCloseDelay.humanizeMs())
+                },
                 onSelected = {
                     popupManager.push(focusRequester, true)
                     visible = true
@@ -204,11 +212,11 @@ fun SettingsCategoryUI(
             )
         }
 
-        item {
+        item(key = "uiFocusOptimize") {
             SettingsListItem(
-                headlineContent = "焦点优化",
-                supportingContent = "关闭后可解决触摸设备在部分场景下闪退",
-                trailingContent = {
+                headlineContentProvider = { "焦点优化" },
+                supportingContentProvider = { "关闭后可解决触摸设备在部分场景下闪退" },
+                trailingContentProvider = {
                     Switch(settingsViewModel.uiFocusOptimize, null)
                 },
                 onSelected = {

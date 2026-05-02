@@ -7,6 +7,9 @@ import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import top.yogiczy.mytv.core.data.entities.epg.EpgProgrammeReserveList
 import top.yogiczy.mytv.core.data.entities.epgsource.EpgSource
 import top.yogiczy.mytv.core.data.entities.epgsource.EpgSourceList
@@ -22,7 +25,7 @@ class SettingsViewModel : ViewModel() {
         get() = _appBootLaunch
         set(value) {
             _appBootLaunch = value
-            Configs.appBootLaunch = value
+            viewModelScope.launch(Dispatchers.IO) { Configs.appBootLaunch = value }
         }
 
     private var _appLastLatestVersion by mutableStateOf(Configs.appLastLatestVersion)
@@ -46,7 +49,7 @@ class SettingsViewModel : ViewModel() {
         get() = _debugShowFps
         set(value) {
             _debugShowFps = value
-            Configs.debugShowFps = value
+            viewModelScope.launch(Dispatchers.IO) { Configs.debugShowFps = value }
         }
 
     private var _debugShowVideoPlayerMetadata by mutableStateOf(Configs.debugShowVideoPlayerMetadata)
@@ -142,7 +145,7 @@ class SettingsViewModel : ViewModel() {
         get() = _iptvChannelFavoriteList
         set(value) {
             _iptvChannelFavoriteList = value
-            Configs.iptvChannelFavoriteList = value
+            viewModelScope.launch(Dispatchers.IO) { Configs.iptvChannelFavoriteList = value }
         }
 
     private var _iptvChannelFavoriteChangeBoundaryJumpOut by mutableStateOf(Configs.iptvChannelFavoriteChangeBoundaryJumpOut)
@@ -158,7 +161,7 @@ class SettingsViewModel : ViewModel() {
         get() = _iptvChannelGroupHiddenList
         set(value) {
             _iptvChannelGroupHiddenList = value
-            Configs.iptvChannelGroupHiddenList = value
+            viewModelScope.launch(Dispatchers.IO) { Configs.iptvChannelGroupHiddenList = value }
         }
 
     private var _iptvHybridMode by mutableStateOf(Configs.iptvHybridMode)
@@ -174,7 +177,7 @@ class SettingsViewModel : ViewModel() {
         get() = _epgEnable
         set(value) {
             _epgEnable = value
-            Configs.epgEnable = value
+            viewModelScope.launch(Dispatchers.IO) { Configs.epgEnable = value }
         }
 
     private var _epgSourceCurrent by mutableStateOf(Configs.epgSourceCurrent)
@@ -214,7 +217,7 @@ class SettingsViewModel : ViewModel() {
         get() = _uiShowEpgProgrammeProgress
         set(value) {
             _uiShowEpgProgrammeProgress = value
-            Configs.uiShowEpgProgrammeProgress = value
+            viewModelScope.launch(Dispatchers.IO) { Configs.uiShowEpgProgrammeProgress = value }
         }
 
     private var _uiShowEpgProgrammePermanentProgress by mutableStateOf(Configs.uiShowEpgProgrammePermanentProgress)
@@ -230,7 +233,7 @@ class SettingsViewModel : ViewModel() {
         get() = _uiShowChannelLogo
         set(value) {
             _uiShowChannelLogo = value
-            Configs.uiShowChannelLogo = value
+            viewModelScope.launch(Dispatchers.IO) { Configs.uiShowChannelLogo = value }
         }
 
     private var _uiUseClassicPanelScreen by mutableStateOf(Configs.uiUseClassicPanelScreen)
@@ -238,7 +241,7 @@ class SettingsViewModel : ViewModel() {
         get() = _uiUseClassicPanelScreen
         set(value) {
             _uiUseClassicPanelScreen = value
-            Configs.uiUseClassicPanelScreen = value
+            viewModelScope.launch(Dispatchers.IO) { Configs.uiUseClassicPanelScreen = value }
         }
 
     private var _uiDensityScaleRatio by mutableFloatStateOf(Configs.uiDensityScaleRatio)

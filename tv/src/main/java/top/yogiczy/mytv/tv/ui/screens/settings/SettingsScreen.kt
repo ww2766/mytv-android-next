@@ -34,13 +34,16 @@ fun SettingsScreen(
 ) {
     val childPadding = rememberChildPadding()
     var currentCategory by remember { mutableStateOf(SettingsCategories.entries.first()) }
+    // 引入防抖后的分类状态，避免快速操作时右侧内容频繁重构
+    var deferredCategory by remember { mutableStateOf(currentCategory) }
 
-    LaunchedEffect(Unit) {
-        while (true) {
-            delay(1000)
-            settingsViewModel.refresh()
-        }
+    LaunchedEffect(currentCategory) {
+        // 如果是快速滑动，不立即触发右侧沉重组件的加载
+        delay(200)
+        deferredCategory = currentCategory
     }
+
+
 
     Box(
         modifier = modifier
@@ -60,7 +63,7 @@ fun SettingsScreen(
             )
 
             SettingsCategoryContent(
-                currentCategoryProvider = { currentCategory },
+                currentCategoryProvider = { deferredCategory },
                 channelGroupListProvider = channelGroupListProvider,
             )
         }

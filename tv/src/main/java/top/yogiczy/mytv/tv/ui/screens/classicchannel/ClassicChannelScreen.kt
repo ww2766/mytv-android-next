@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -24,6 +25,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
@@ -36,6 +38,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import kotlinx.coroutines.delay
 import top.yogiczy.mytv.core.data.entities.channel.Channel
 import top.yogiczy.mytv.core.data.entities.channel.ChannelGroup
 import top.yogiczy.mytv.core.data.entities.channel.ChannelGroupList
@@ -64,6 +67,7 @@ fun ClassicChannelScreen(
     channelGroupListProvider: () -> ChannelGroupList = { ChannelGroupList() },
     favoriteChannelListProvider: () -> ChannelList = { ChannelList() },
     currentChannelProvider: () -> Channel = { Channel() },
+    currentChannelIdxProvider: () -> Int = { 0 },
     currentChannelUrlIdxProvider: () -> Int = { 0 },
     showChannelLogoProvider: () -> Boolean = { false },
     onChannelSelected: (Channel) -> Unit = {},
@@ -90,12 +94,20 @@ fun ClassicChannelScreen(
         mutableStateOf(
             if (channelFavoriteListVisible)
                 ClassicPanelScreenFavoriteChannelGroup
-            else
+            else {
                 channelGroupList[max(0, channelGroupList.channelGroupIdx(currentChannelProvider()))]
+            }
         )
     }
     var focusedChannel by remember { mutableStateOf(currentChannelProvider()) }
     var epgListVisible by remember { mutableStateOf(false) }
+
+    // 延迟加载非核心组件标识
+    var isFullUIReady by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        delay(150) // 延迟 150ms 开启完整 UI，确保主列表先显示并稳定
+        isFullUIReady = true
+    }
 
     var groupWidth by remember { mutableIntStateOf(0) }
     var channelListWidth by remember { mutableIntStateOf(0) }
@@ -168,6 +180,13 @@ fun ClassicChannelScreen(
                 },
                 epgListProvider = epgListProvider,
                 initialChannelProvider = currentChannelProvider,
+                initialChannelIdxProvider = {
+                    if (focusedChannelGroup == ClassicPanelScreenFavoriteChannelGroup) {
+                        favoriteChannelListProvider().indexOf(currentChannelProvider())
+                    } else {
+                        focusedChannelGroup.channelList.indexOf(currentChannelProvider())
+                    }
+                },
                 onChannelSelected = onChannelSelected,
                 onChannelFavoriteToggle = onChannelFavoriteToggle,
                 onChannelFocused = { channel -> focusedChannel = channel },
@@ -192,7 +211,7 @@ fun ClassicChannelScreen(
                     onUserAction = { screenAutoCloseState.active() },
                 )
             }
-            Visible({ !epgListVisible }) {
+            Visible({ !epgListVisible && isFullUIReady }) {
                 ClassicPanelScreenShowEpgTip(
                     modifier = Modifier
                         .background(MaterialTheme.colorScheme.surface.copy(0.7f))
@@ -212,7 +231,7 @@ fun ClassicChannelScreen(
         },
     )
 
-    Visible({ !epgListVisible }) {
+    Visible({ !epgListVisible && isFullUIReady }) {
         Box(Modifier.fillMaxSize()) {
             ChannelInfo(
                 modifier = Modifier
@@ -290,6 +309,7 @@ private fun ClassicChannelScreenPreview() {
             ClassicChannelScreen(
                 channelGroupListProvider = { ChannelGroupList.EXAMPLE },
                 currentChannelProvider = { ChannelGroupList.EXAMPLE.first().channelList.first() },
+                currentChannelIdxProvider = { 0 },
                 epgListProvider = { EpgList.example(ChannelGroupList.EXAMPLE.channelList) },
                 showEpgProgrammeProgressProvider = { true },
             )
