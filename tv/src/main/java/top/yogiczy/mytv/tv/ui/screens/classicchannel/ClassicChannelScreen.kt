@@ -127,10 +127,12 @@ fun ClassicChannelScreen(
     }
 
     val fullReserveList = epgProgrammeReserveListProvider()
-    val focusedEpgProgrammeReserveList = remember(fullReserveList, focusedChannel.name) {
-        EpgProgrammeReserveList(
-            fullReserveList.filter { it.channel == focusedChannel.name }
-        )
+    val focusedEpgProgrammeReserveListProvider = remember(fullReserveList) {
+        {
+            EpgProgrammeReserveList(
+                fullReserveList.filter { it.channel == focusedChannel.name }
+            )
+        }
     }
 
     ClassicChannelScreenWrapper(
@@ -203,7 +205,7 @@ fun ClassicChannelScreen(
                     programmeListModifier = Modifier
                         .width(if (epgListIsFocused) 340.dp else 268.dp),
                     epgProvider = { epgListProvider().match(focusedChannel) },
-                    epgProgrammeReserveListProvider = { focusedEpgProgrammeReserveList },
+                    epgProgrammeReserveListProvider = focusedEpgProgrammeReserveListProvider,
                     supportPlaybackProvider = { supportPlaybackProvider(focusedChannel) },
                     currentPlaybackEpgProgrammeProvider = currentPlaybackEpgProgrammeProvider,
                     onEpgProgrammePlayback = { onEpgProgrammePlayback(focusedChannel, it) },

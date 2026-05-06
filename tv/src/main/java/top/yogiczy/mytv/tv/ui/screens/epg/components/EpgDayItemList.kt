@@ -8,6 +8,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
@@ -36,7 +37,7 @@ fun EpgDayItemList(
     val dayList = dayListProvider()
     val currentDay = currentDayProvider()
 
-    val itemFocusRequesterList = List(dayList.size) { FocusRequester() }
+    val itemFocusRequesterMap = remember(dayList) { mutableMapOf<Int, FocusRequester>() }
     val listState = rememberLazyListState(max(0, dayList.indexOf(currentDay) - 2))
 
     LaunchedEffect(listState) {
@@ -48,15 +49,16 @@ fun EpgDayItemList(
     LazyColumn(
         modifier = modifier.ifElse(
             LocalSettings.current.uiFocusOptimize,
-            Modifier.saveFocusRestorer { itemFocusRequesterList[dayList.indexOf(currentDay)] },
+            Modifier.saveFocusRestorer { itemFocusRequesterMap[dayList.indexOf(currentDay)] ?: FocusRequester.Default },
         ),
         state = listState,
         contentPadding = PaddingValues(vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         itemsIndexed(dayList) { index, day ->
+            val focusRequester = remember(index) { itemFocusRequesterMap.getOrPut(index) { FocusRequester() } }
             EpgDayItem(
-                modifier = Modifier.focusRequester(itemFocusRequesterList[index]),
+                modifier = Modifier.focusRequester(focusRequester),
                 dayProvider = { day },
                 isSelectedProvider = { day == currentDay },
                 onDaySelected = { onDaySelected(day) },

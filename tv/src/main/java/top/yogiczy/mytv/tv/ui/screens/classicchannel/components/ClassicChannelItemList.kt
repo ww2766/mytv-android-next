@@ -84,8 +84,8 @@ fun ClassicChannelItemList(
     val channelGroup = channelGroupProvider()
     val channelList = channelListProvider()
     val initialChannel = initialChannelProvider()
-    val itemFocusRequesterList =
-        remember(channelList) { List(channelList.size) { FocusRequester() } }
+    val itemFocusRequesterMap =
+        remember(channelList) { mutableMapOf<Int, FocusRequester>() }
 
     val initialChannelIdx = initialChannelIdxProvider()
     var hasFocused by rememberSaveable { mutableStateOf(initialChannelIdx == -1) }
@@ -95,7 +95,7 @@ fun ClassicChannelItemList(
         )
     }
 
-    val focusedChannelIdx by remember(channelList, initialChannelIdx) {
+    val focusedChannelIdxState = remember(channelList, initialChannelIdx) {
         derivedStateOf { 
             if (!hasFocused && initialChannelIdx != -1) initialChannelIdx
             else channelList.indexOf(focusedChannel) 
@@ -145,18 +145,20 @@ fun ClassicChannelItemList(
             .ifElse(
                 LocalSettings.current.uiFocusOptimize,
                 Modifier.saveFocusRestorer {
-                    itemFocusRequesterList.getOrNull(focusedChannelIdx) ?: FocusRequester.Default
+                    itemFocusRequesterMap[focusedChannelIdxState.value] ?: FocusRequester.Default
                 },
             ),
     ) {
         itemsIndexed(channelList, key = { _, channel -> channel.hashCode() }) { index, channel ->
             val isSelected by remember { derivedStateOf { channel == focusedChannel } }
-            val initialFocused by remember {
-                derivedStateOf { !hasFocused && channel == initialChannel }
-            }
+            val initialFocused = !hasFocused && channel == initialChannel
 
-            val onUp = remember { { scrollToLast() } }
-            val onDown = remember { { scrollToFirst() } }
+            val currentScrollToLast by rememberUpdatedState { scrollToLast() }
+            val currentScrollToFirst by rememberUpdatedState { scrollToFirst() }
+            val onUp = remember { { currentScrollToLast() } }
+            val onDown = remember { { currentScrollToFirst() } }
+
+            val focusRequester = remember(index) { itemFocusRequesterMap.getOrPut(index) { FocusRequester() } }
 
             ClassicChannelItem(
                 modifier = Modifier
@@ -198,7 +200,7 @@ fun ClassicChannelItemList(
                 },
                 epgList = epgListProvider(),
                 showEpgProgrammeProgressProvider = showEpgProgrammeProgressProvider,
-                focusRequesterProvider = remember(index) { { itemFocusRequesterList[index] } },
+                focusRequesterProvider = remember(focusRequester) { { focusRequester } },
                 initialFocusedProvider = remember(initialFocused) { { initialFocused } },
                 onInitialFocused = remember { { hasFocused = true } },
                 isSelected = isSelected,

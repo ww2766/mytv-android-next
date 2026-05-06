@@ -11,6 +11,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.focus.FocusRequester
@@ -465,20 +466,26 @@ fun MainContent(
     // 应用就绪后在空闲帧就预先准备好组合树，第一次按键就能立即显示
     var classicScreenEverShown by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
-        if (settingsViewModel.uiUseClassicPanelScreen) {
-            // 延迟 500ms，让主界面先完成首帧渲染，再在后台预热选台界面
-            delay(500)
-            classicScreenEverShown = true
+        launch {
+            if (settingsViewModel.uiUseClassicPanelScreen) {
+                // 延迟 500ms，让主界面先完成首帧渲染，再在后台预热选台界面
+                delay(500)
+                classicScreenEverShown = true
+            }
+        }
+        launch {
+            snapshotFlow { mainContentState.isChannelScreenVisible }
+                .collect { isVisible ->
+                    if (isVisible && settingsViewModel.uiUseClassicPanelScreen) {
+                        classicScreenEverShown = true
+                    }
+                }
         }
     }
 
-    if (mainContentState.isChannelScreenVisible && settingsViewModel.uiUseClassicPanelScreen) {
-        classicScreenEverShown = true
-    }
     if (classicScreenEverShown && settingsViewModel.uiUseClassicPanelScreen) {
-        val isVisible = mainContentState.isChannelScreenVisible
         PopupContent(
-            visibleProvider = { isVisible },
+            visibleProvider = { mainContentState.isChannelScreenVisible },
             onDismissRequest = { mainContentState.isChannelScreenVisible = false },
         ) {
             ClassicChannelScreen(

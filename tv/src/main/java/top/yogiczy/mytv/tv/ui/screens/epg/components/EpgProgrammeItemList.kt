@@ -7,6 +7,7 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -36,7 +37,7 @@ fun EpgProgrammeItemList(
     onUserAction: () -> Unit = {},
 ) {
     val epgProgrammeList = epgProgrammeListProvider()
-    val itemFocusRequesterList = List(epgProgrammeList.size) { FocusRequester() }
+    val itemFocusRequesterMap = remember(epgProgrammeList) { mutableMapOf<Int, FocusRequester>() }
 
     val listState = LazyListState(max(0, epgProgrammeList.indexOfFirst { it.isLive() } - 2))
     LaunchedEffect(listState) {
@@ -59,8 +60,9 @@ fun EpgProgrammeItemList(
             epgProgrammeList,
             key = { _, programme -> programme.hashCode() },
         ) { index, programme ->
+            val focusRequester = remember(index) { itemFocusRequesterMap.getOrPut(index) { FocusRequester() } }
             EpgProgrammeItem(
-                modifier = Modifier.focusRequester(itemFocusRequesterList[index]),
+                modifier = Modifier.focusRequester(focusRequester),
                 epgProgrammeProvider = { programme },
                 supportPlaybackProvider = supportPlaybackProvider,
                 isPlaybackProvider = { currentPlaybackProvider() == programme },

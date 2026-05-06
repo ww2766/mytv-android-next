@@ -56,7 +56,7 @@ fun ClassicChannelGroupItemList(
 ) {
     val channelGroupList = channelGroupListProvider()
     val initialChannelGroup = initialChannelGroupProvider()
-    val itemFocusRequesterList = List(channelGroupList.size) { FocusRequester() }
+    val itemFocusRequesterMap = remember(channelGroupList) { mutableMapOf<Int, FocusRequester>() }
 
     var focusedChannelGroup by remember { mutableStateOf(initialChannelGroup) }
 
@@ -96,7 +96,7 @@ fun ClassicChannelGroupItemList(
             .ifElse(
                 LocalSettings.current.uiFocusOptimize,
                 Modifier.saveFocusRestorer {
-                    itemFocusRequesterList[channelGroupList.indexOf(focusedChannelGroup)]
+                    itemFocusRequesterMap[channelGroupList.indexOf(focusedChannelGroup)] ?: FocusRequester.Default
                 },
             ),
         state = listState,
@@ -106,21 +106,26 @@ fun ClassicChannelGroupItemList(
         itemsIndexed(channelGroupList) { index, channelGroup ->
             val isSelected by remember { derivedStateOf { channelGroup == focusedChannelGroup } }
 
+            val focusRequester = remember(index) { itemFocusRequesterMap.getOrPut(index) { FocusRequester() } }
+
+            val currentScrollToLast by rememberUpdatedState { scrollToLast() }
+            val currentScrollToFirst by rememberUpdatedState { scrollToFirst() }
+
             ClassicChannelGroupItem(
                 modifier = Modifier
                     .ifElse(channelGroup == initialChannelGroup, Modifier.focusOnLaunchedSaveable())
-                    .focusRequester(itemFocusRequesterList[index])
+                    .focusRequester(focusRequester)
                     .ifElse(
                         index == 0,
                         Modifier
                             .focusRequester(firstFocusRequester)
-                            .handleKeyEvents(onUp = { scrollToLast() })
+                            .handleKeyEvents(onUp = { currentScrollToLast() })
                     )
                     .ifElse(
                         index == channelGroupList.lastIndex,
                         Modifier
                             .focusRequester(lastFocusRequester)
-                            .handleKeyEvents(onDown = { scrollToFirst() })
+                            .handleKeyEvents(onDown = { currentScrollToFirst() })
                     ),
                 channelGroupProvider = { channelGroup },
                 isSelectedProvider = { isSelected },
