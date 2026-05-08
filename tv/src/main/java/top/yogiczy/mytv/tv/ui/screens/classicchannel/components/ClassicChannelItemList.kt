@@ -96,10 +96,10 @@ fun ClassicChannelItemList(
         itemFocusRequesterMap.getOrPut("${channel.name}_${channel.urlList.firstOrNull()}") { FocusRequester() }
 
     val initialChannelIdx = initialChannelIdxProvider()
-    var hasFocused by remember(channelList) { mutableStateOf(initialChannelIdx == -1) }
-    var focusedChannel by remember(channelList) {
+    var hasFocused by remember(initialChannel.name) { mutableStateOf(initialChannelIdx == -1) }
+    var focusedChannel by remember(channelList, initialChannel.name) {
         mutableStateOf(
-            if (hasFocused) channelList.firstOrNull() ?: Channel() else initialChannel
+            if (initialChannelIdx != -1) initialChannel else channelList.firstOrNull() ?: Channel()
         )
     }
 
@@ -112,10 +112,7 @@ fun ClassicChannelItemList(
     }
 
     val listState = remember(channelGroup) {
-        LazyListState(
-            if (hasFocused) 0
-            else max(0, initialChannelIdx - 2)
-        )
+        LazyListState(if (initialChannelIdx != -1) max(0, initialChannelIdx - 2) else 0)
     }
     LaunchedEffect(listState) {
         snapshotFlow { listState.isScrollInProgress }.distinctUntilChanged()
