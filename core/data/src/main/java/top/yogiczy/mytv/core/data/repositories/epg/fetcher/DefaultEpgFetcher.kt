@@ -10,7 +10,7 @@ class DefaultEpgFetcher : EpgFetcher {
         return true
     }
 
-    override suspend fun fetch(response: Response): String {
-        return "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
-    }
+    override suspend fun fetch(response: Response) = java.io.ByteArrayInputStream(
+        "<?xml version=\"1.0\" encoding=\"UTF-8\"?>".toByteArray()
+    )
 }

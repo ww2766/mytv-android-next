@@ -14,7 +14,7 @@ interface EpgFetcher {
     /**
      * 获取节目单
      */
-    suspend fun fetch(response: Response): String
+    suspend fun fetch(response: Response): java.io.InputStream
 
     companion object {
         val instances = listOf(

@@ -11,7 +11,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
@@ -29,6 +28,7 @@ import kotlin.math.max
 @Composable
 fun ChannelItemList(
     modifier: Modifier = Modifier,
+    groupName: String = "",
     channelListProvider: () -> ChannelList = { ChannelList() },
     currentChannelProvider: () -> Channel = { Channel() },
     showChannelLogoProvider: () -> Boolean = { false },
@@ -43,7 +43,7 @@ fun ChannelItemList(
 
     val childPadding = rememberChildPadding()
     val listState = rememberLazyListState(max(0, channelList.indexOf(currentChannel) - 2))
-    var hasItemFocused by rememberSaveable { mutableStateOf(false) }
+    var hasItemFocused by remember(channelList) { mutableStateOf(false) }
 
     LaunchedEffect(listState) {
         snapshotFlow { listState.isScrollInProgress }
@@ -60,7 +60,7 @@ fun ChannelItemList(
         ),
         horizontalArrangement = Arrangement.spacedBy(20.dp),
     ) {
-        items(channelList, key = { it.name }) { channel ->
+        items(channelList, key = { "${groupName}_${it.name}_${it.urlList.firstOrNull()}" }) { channel ->
             ChannelItem(
                 channelProvider = remember(channel) { { channel } },
                 showChannelLogoProvider = showChannelLogoProvider,

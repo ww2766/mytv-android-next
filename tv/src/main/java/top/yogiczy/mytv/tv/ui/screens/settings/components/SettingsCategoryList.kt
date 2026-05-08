@@ -1,5 +1,11 @@
 package top.yogiczy.mytv.tv.ui.screens.settings.components
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.focusable
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -88,26 +94,50 @@ private fun SettingsCategoryItem(
         }
     }
 
-    ListItem(
-        colors = ListItemDefaults.colors(
-            selectedContainerColor = MaterialTheme.colorScheme.inverseSurface.copy(0.1f),
-            selectedContentColor = MaterialTheme.colorScheme.onSurface,
-        ),
-        selected = isSelectedProvider(),
-        onClick = { },
-        leadingContent = { Icon(icon, title) },
-        headlineContent = { Text(text = title) },
+    val isSelected = isSelectedProvider()
+
+    val backgroundColor = if (isFocused) {
+        MaterialTheme.colorScheme.onSurface
+    } else if (isSelected) {
+        MaterialTheme.colorScheme.inverseSurface.copy(alpha = 0.1f)
+    } else {
+        androidx.compose.ui.graphics.Color.Transparent
+    }
+
+    val contentColor = if (isFocused) {
+        MaterialTheme.colorScheme.surface
+    } else if (isSelected) {
+        MaterialTheme.colorScheme.onSurface
+    } else {
+        MaterialTheme.colorScheme.onSurface
+    }
+
+    Row(
         modifier = modifier
+            .fillMaxWidth()
+            .clip(ListItemDefaults.shape().shape)
+            .background(backgroundColor)
             .focusRequester(focusRequester)
             .onFocusChanged {
                 isFocused = it.isFocused || it.hasFocus
             }
+            .focusable()
             .handleKeyEvents(
                 isFocused = { isFocused },
                 focusRequester = focusRequester,
                 onSelect = { focusManager.moveFocus(FocusDirection.Right) },
-            ),
-    )
+            )
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        Icon(icon, contentDescription = title, tint = contentColor)
+        Text(
+            text = title,
+            color = contentColor,
+            style = MaterialTheme.typography.titleMedium,
+        )
+    }
 }
 
 @Preview

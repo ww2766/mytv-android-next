@@ -4,6 +4,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.focusable
+import androidx.compose.ui.Alignment
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.width
@@ -17,6 +21,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.ExperimentalComposeUiApi
@@ -150,36 +155,51 @@ private fun ClassicChannelGroupItem(
     val focusRequester = remember { FocusRequester() }
     var isFocused by remember { mutableStateOf(false) }
 
-    DenseListItem(
+    val isSelected = isSelectedProvider()
+    val backgroundColor = if (isFocused) {
+        MaterialTheme.colorScheme.onSurface
+    } else if (isSelected) {
+        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+    } else {
+        androidx.compose.ui.graphics.Color.Transparent
+    }
+
+    val contentColor = if (isFocused) {
+        MaterialTheme.colorScheme.surface
+    } else {
+        MaterialTheme.colorScheme.onSurface
+    }
+
+    androidx.compose.foundation.layout.Box(
         modifier = modifier
+            .fillMaxWidth()
+            .clip(ListItemDefaults.shape().shape)
+            .background(backgroundColor)
             .focusRequester(focusRequester)
             .onFocusChanged {
                 isFocused = it.isFocused || it.hasFocus
                 if (isFocused) onFocused()
             }
+            .focusable()
             .handleKeyEvents(
                 isFocused = { isFocused },
                 focusRequester = focusRequester,
                 onSelect = {},
-            ),
-        colors = ListItemDefaults.colors(
-            focusedContainerColor = MaterialTheme.colorScheme.onSurface,
-            selectedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-            selectedContentColor = MaterialTheme.colorScheme.onSurface,
-        ),
-        selected = isSelectedProvider(),
-        onClick = {},
-        headlineContent = {
-            Text(
-                text = channelGroup.name,
-                textAlign = TextAlign.Center,
-                maxLines = 1,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .ifElse(isFocused, Modifier.basicMarquee()),
             )
-        },
-    )
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = channelGroup.name,
+            textAlign = TextAlign.Center,
+            color = contentColor,
+            maxLines = 1,
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier
+                .fillMaxWidth()
+                .basicMarquee(animationMode = androidx.compose.foundation.MarqueeAnimationMode.WhileFocused),
+        )
+    }
 }
 
 @Preview

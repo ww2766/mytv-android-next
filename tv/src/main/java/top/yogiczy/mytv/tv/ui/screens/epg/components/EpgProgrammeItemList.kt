@@ -7,6 +7,8 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
@@ -61,12 +63,16 @@ fun EpgProgrammeItemList(
             key = { _, programme -> programme.hashCode() },
         ) { index, programme ->
             val focusRequester = remember(index) { itemFocusRequesterMap.getOrPut(index) { FocusRequester() } }
+            
+            val isPlayback by remember(programme) { derivedStateOf { currentPlaybackProvider() == programme } }
+            val hasReserved by remember(programme) { derivedStateOf { epgProgrammeReserveListProvider().any { it.programme == programme.title } } }
+
             EpgProgrammeItem(
                 modifier = Modifier.focusRequester(focusRequester),
                 epgProgrammeProvider = { programme },
                 supportPlaybackProvider = supportPlaybackProvider,
-                isPlaybackProvider = { currentPlaybackProvider() == programme },
-                hasReservedProvider = { epgProgrammeReserveListProvider().firstOrNull { it.programme == programme.title } != null },
+                isPlaybackProvider = { isPlayback },
+                hasReservedProvider = { hasReserved },
                 onPlayback = { onPlayback(programme) },
                 onReserve = { onReserve(programme) },
                 focusOnLive = focusOnLive,

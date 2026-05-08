@@ -17,16 +17,6 @@ class XmlGzEpgFetcher : EpgFetcher {
     }
 
     override suspend fun fetch(response: Response) = withContext(Dispatchers.IO) {
-        val gzData = response.body!!.bytes()
-        val stringBuilder = StringBuilder()
-        GZIPInputStream(ByteArrayInputStream(gzData)).use { gzipInputStream ->
-            BufferedReader(InputStreamReader(gzipInputStream)).use { reader ->
-                var line: String?
-                while (reader.readLine().also { line = it } != null) {
-                    stringBuilder.append(line).append("\n")
-                }
-            }
-        }
-        stringBuilder.toString()
+        java.util.zip.GZIPInputStream(response.body!!.byteStream())
     }
 }

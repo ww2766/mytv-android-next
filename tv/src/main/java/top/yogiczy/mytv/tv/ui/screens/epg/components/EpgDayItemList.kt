@@ -8,6 +8,8 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.ExperimentalComposeUiApi
@@ -35,10 +37,8 @@ fun EpgDayItemList(
     onUserAction: () -> Unit = {},
 ) {
     val dayList = dayListProvider()
-    val currentDay = currentDayProvider()
-
     val itemFocusRequesterMap = remember(dayList) { mutableMapOf<Int, FocusRequester>() }
-    val listState = rememberLazyListState(max(0, dayList.indexOf(currentDay) - 2))
+    val listState = rememberLazyListState(max(0, dayList.indexOf(currentDayProvider()) - 2))
 
     LaunchedEffect(listState) {
         snapshotFlow { listState.isScrollInProgress }
@@ -49,7 +49,7 @@ fun EpgDayItemList(
     LazyColumn(
         modifier = modifier.ifElse(
             LocalSettings.current.uiFocusOptimize,
-            Modifier.saveFocusRestorer { itemFocusRequesterMap[dayList.indexOf(currentDay)] ?: FocusRequester.Default },
+            Modifier.saveFocusRestorer { itemFocusRequesterMap[dayList.indexOf(currentDayProvider())] ?: FocusRequester.Default },
         ),
         state = listState,
         contentPadding = PaddingValues(vertical = 8.dp),
@@ -57,10 +57,11 @@ fun EpgDayItemList(
     ) {
         itemsIndexed(dayList) { index, day ->
             val focusRequester = remember(index) { itemFocusRequesterMap.getOrPut(index) { FocusRequester() } }
+            val isSelected by remember(day) { derivedStateOf { day == currentDayProvider() } }
             EpgDayItem(
                 modifier = Modifier.focusRequester(focusRequester),
                 dayProvider = { day },
-                isSelectedProvider = { day == currentDay },
+                isSelectedProvider = { isSelected },
                 onDaySelected = { onDaySelected(day) },
             )
         }

@@ -4,6 +4,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -84,22 +87,24 @@ fun ClassicChannelItemList(
     val channelGroup = channelGroupProvider()
     val channelList = channelListProvider()
     val initialChannel = initialChannelProvider()
-    val itemFocusRequesterMap =
-        remember(channelList) { mutableMapOf<Int, FocusRequester>() }
+    
+    // 焦点请求器映射表绑定到分类名
+    // 1. 确保在当前分类刷新数据时（名字不变），焦点请求器得以复用，不丢焦点
+    // 2. 确保在切换分类时（名字变化），旧分类的映射表被及时销毁，防止内存膨胀
+    val itemFocusRequesterMap = remember(channelGroup.name) { mutableMapOf<String, FocusRequester>() }
+    fun getFocusRequester(channel: Channel) = 
+        itemFocusRequesterMap.getOrPut("${channel.name}_${channel.urlList.firstOrNull()}") { FocusRequester() }
 
     val initialChannelIdx = initialChannelIdxProvider()
-    var hasFocused by rememberSaveable { mutableStateOf(initialChannelIdx == -1) }
+    var hasFocused by remember(channelList) { mutableStateOf(initialChannelIdx == -1) }
     var focusedChannel by remember(channelList) {
         mutableStateOf(
             if (hasFocused) channelList.firstOrNull() ?: Channel() else initialChannel
         )
     }
 
-    val focusedChannelIdxState = remember(channelList, initialChannelIdx) {
-        derivedStateOf { 
-            if (!hasFocused && initialChannelIdx != -1) initialChannelIdx
-            else channelList.indexOf(focusedChannel) 
-        }
+    val focusedChannelIdxState = remember(channelList, focusedChannel) {
+        derivedStateOf { channelList.indexOf(focusedChannel) }
     }
 
     val onChannelFocusedDebounce = rememberDebounceState(wait = 100L) {
@@ -145,11 +150,11 @@ fun ClassicChannelItemList(
             .ifElse(
                 LocalSettings.current.uiFocusOptimize,
                 Modifier.saveFocusRestorer {
-                    itemFocusRequesterMap[focusedChannelIdxState.value] ?: FocusRequester.Default
+                    getFocusRequester(focusedChannel)
                 },
             ),
     ) {
-        itemsIndexed(channelList, key = { _, channel -> channel.hashCode() }) { index, channel ->
+        itemsIndexed(channelList, key = { _, channel -> "${channel.name}_${channel.urlList.firstOrNull()}" }) { index, channel ->
             val isSelected by remember { derivedStateOf { channel == focusedChannel } }
             val initialFocused = !hasFocused && channel == initialChannel
 
@@ -158,7 +163,7 @@ fun ClassicChannelItemList(
             val onUp = remember { { currentScrollToLast() } }
             val onDown = remember { { currentScrollToFirst() } }
 
-            val focusRequester = remember(index) { itemFocusRequesterMap.getOrPut(index) { FocusRequester() } }
+            val focusRequester = getFocusRequester(channel)
 
             ClassicChannelItem(
                 modifier = Modifier
@@ -203,7 +208,7 @@ fun ClassicChannelItemList(
                 focusRequesterProvider = remember(focusRequester) { { focusRequester } },
                 initialFocusedProvider = remember(initialFocused) { { initialFocused } },
                 onInitialFocused = remember { { hasFocused = true } },
-                isSelected = isSelected,
+                isSelectedProvider = { isSelected },
                 showChannelLogoProvider = showChannelLogoProvider,
             )
         }
@@ -223,7 +228,7 @@ private fun ClassicChannelItem(
     focusRequesterProvider: () -> FocusRequester = { FocusRequester() },
     initialFocusedProvider: () -> Boolean = { false },
     onInitialFocused: () -> Unit = {},
-    isSelected: Boolean = false,
+    isSelectedProvider: () -> Boolean = { false },
 ) {
     val nowEpgProgramme = remember(channel, epgList) { epgList.recentProgramme(channel)?.now }
     val showEpgProgrammeProgress = showEpgProgrammeProgressProvider()
@@ -256,40 +261,57 @@ private fun ClassicChannelItem(
         }
 
         Box(modifier = modifier.clip(ListItemDefaults.shape().shape)) {
-            DenseListItem(
+            val isSelected = isSelectedProvider()
+            val backgroundColor = if (isFocused) {
+                MaterialTheme.colorScheme.onSurface
+            } else if (isSelected) {
+                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+            } else {
+                androidx.compose.ui.graphics.Color.Transparent
+            }
+
+            val contentColor = if (isFocused) {
+                MaterialTheme.colorScheme.surface
+            } else {
+                MaterialTheme.colorScheme.onSurface
+            }
+
+            Row(
                 modifier = Modifier
+                    .fillMaxWidth()
+                    .background(backgroundColor)
                     .focusRequester(focusRequester)
                     .onFocusChanged {
                         isFocused = it.isFocused || it.hasFocus
                         if (isFocused) onChannelFocused()
                     }
+                    .focusable()
                     .handleKeyEvents(
                         onSelect = onChannelSelected,
                         onLongSelect = onChannelFavoriteToggle,
-                    ),
-                colors = ListItemDefaults.colors(
-                    focusedContainerColor = MaterialTheme.colorScheme.onSurface,
-                    selectedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                    selectedContentColor = MaterialTheme.colorScheme.onSurface,
-                ),
-                selected = isSelected,
-                onClick = {},
-                headlineContent = {
+                    )
+                    .padding(horizontal = 16.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
                         channel.name,
+                        color = contentColor,
+                        style = MaterialTheme.typography.titleMedium,
                         maxLines = 1,
-                        modifier = Modifier.ifElse(isFocused, Modifier.basicMarquee()),
+                        modifier = Modifier.basicMarquee(animationMode = androidx.compose.foundation.MarqueeAnimationMode.WhileFocused),
                     )
-                },
-                supportingContent = {
                     Text(
                         text = nowEpgProgramme?.title ?: "无节目",
+                        color = contentColor.copy(alpha = 0.8f),
+                        style = MaterialTheme.typography.bodyMedium,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.ifElse(isFocused, Modifier.basicMarquee()),
+                        modifier = Modifier.basicMarquee(animationMode = androidx.compose.foundation.MarqueeAnimationMode.WhileFocused),
                     )
-                },
-            )
+                }
+            }
 
             if (showEpgProgrammeProgress && nowEpgProgramme != null) {
                 Box(

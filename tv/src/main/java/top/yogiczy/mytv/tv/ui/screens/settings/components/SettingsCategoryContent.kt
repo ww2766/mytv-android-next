@@ -12,6 +12,7 @@ import androidx.tv.material3.Text
 import top.yogiczy.mytv.core.data.entities.channel.ChannelGroupList
 import top.yogiczy.mytv.tv.ui.rememberChildPadding
 import top.yogiczy.mytv.tv.ui.screens.settings.SettingsCategories
+import top.yogiczy.mytv.tv.ui.utils.saveFocusRestorer
 
 @Composable
 fun SettingsCategoryContent(
@@ -28,25 +29,23 @@ fun SettingsCategoryContent(
     ) {
         Text(text = currentCategory.title, style = MaterialTheme.typography.headlineSmall)
 
-        Crossfade(targetState = currentCategory, label = "SettingsContent") { category ->
-            when (category) {
-                SettingsCategories.ABOUT -> SettingsCategoryAbout()
-                SettingsCategories.APP -> SettingsCategoryApp()
-                SettingsCategories.IPTV -> SettingsCategoryIptv(
-                    channelGroupListProvider = channelGroupListProvider,
-                )
+        when (currentCategory) {
+            SettingsCategories.ABOUT -> SettingsCategoryAbout()
+            SettingsCategories.APP -> SettingsCategoryApp()
+            SettingsCategories.IPTV -> SettingsCategoryIptv(
+                channelGroupListProvider = channelGroupListProvider,
+            )
 
-                SettingsCategories.EPG -> SettingsCategoryEpg()
-                SettingsCategories.EPG_RESERVE -> SettingsCategoryEpgReserve()
-                SettingsCategories.UI -> SettingsCategoryUI()
-                SettingsCategories.FAVORITE -> SettingsCategoryFavorite()
-                SettingsCategories.UPDATE -> SettingsCategoryUpdate()
-                SettingsCategories.VIDEO_PLAYER -> SettingsCategoryVideoPlayer()
-                SettingsCategories.HTTP -> SettingsCategoryHttp()
-                SettingsCategories.DEBUG -> SettingsCategoryDebug()
-                SettingsCategories.LOG -> SettingsCategoryLog()
-                SettingsCategories.MORE -> SettingsCategoryPush()
-            }
+            SettingsCategories.EPG -> SettingsCategoryEpg()
+            SettingsCategories.EPG_RESERVE -> SettingsCategoryEpgReserve()
+            SettingsCategories.UI -> SettingsCategoryUI()
+            SettingsCategories.FAVORITE -> SettingsCategoryFavorite()
+            SettingsCategories.UPDATE -> SettingsCategoryUpdate()
+            SettingsCategories.VIDEO_PLAYER -> SettingsCategoryVideoPlayer()
+            SettingsCategories.HTTP -> SettingsCategoryHttp()
+            SettingsCategories.DEBUG -> SettingsCategoryDebug()
+            SettingsCategories.LOG -> SettingsCategoryLog()
+            SettingsCategories.MORE -> SettingsCategoryPush()
         }
     }
 }

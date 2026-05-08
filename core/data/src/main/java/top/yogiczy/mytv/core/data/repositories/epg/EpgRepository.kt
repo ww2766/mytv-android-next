@@ -39,8 +39,7 @@ class EpgRepository(
      * 解析节目单xml
      */
     private suspend fun parseFromXml(
-        xmlString: String,
-        filteredChannels: List<String> = emptyList(),
+        inputStream: java.io.InputStream,
     ) = withContext(Dispatchers.Default) {
         val dateFormat = SimpleDateFormat("yyyyMMddHHmmss Z", Locale.getDefault())
         fun parseTime(time: String): Long {
@@ -50,7 +49,7 @@ class EpgRepository(
 
         val parser: XmlPullParser = Xml.newPullParser()
         parser.setFeature(XmlPullParser.FEATURE_PROCESS_NAMESPACES, false)
-        parser.setInput(StringReader(xmlString))
+        parser.setInput(inputStream, "UTF-8")
 
         val channelNameMap = mutableMapOf<String, String>()
         val programmeMap = mutableMapOf<String, MutableList<EpgProgramme>>()
@@ -64,10 +63,8 @@ class EpgRepository(
                         parser.nextTag()
                         val channelName = parser.nextText()
 
-                        if (filteredChannels.isEmpty() || filteredChannels.contains(channelName.lowercase())) {
-                            channelNameMap[channelId] = channelName
-                            programmeMap[channelId] = mutableListOf()
-                        }
+                        channelNameMap[channelId] = channelName
+                        programmeMap[channelId] = mutableListOf()
                     } else if (parser.name == "programme") {
                         val channelId = parser.getAttributeValue(null, "channel") ?: continue
                         if (channelNameMap.containsKey(channelId)) {
@@ -97,16 +94,25 @@ class EpgRepository(
         log.i("解析节目单完成，共${resultList.size}个频道，${programmeMap.values.sumOf { it.size }}个节目")
         return@withContext EpgList(resultList)
     }
+
     suspend fun getEpgList(
         filteredChannels: List<String> = emptyList(),
         refreshTimeThreshold: Int,
     ) = withContext(Dispatchers.Default) {
 
         try {
-            if (Calendar.getInstance().get(Calendar.HOUR_OF_DAY) < refreshTimeThreshold) {
-                log.d("未到时间点，不刷新节目单")
-                return@withContext EpgList()
+            // Step 1: 仅在达到刷新时间阈值后，尝试下载并缓存 EPG
+            if (Calendar.getInstance().get(Calendar.HOUR_OF_DAY) >= refreshTimeThreshold) {
+                try {
+                    refreshEpgCache()
+                } catch (ex: Exception) {
+                    log.e("下载节目单失败", ex)
+                }
+            } else {
+                log.d("未到${refreshTimeThreshold}:00，跳过下载，使用本地缓存")
             }
+
+            // Step 2: 读取所有已缓存的 EPG 文件（无论是否刷新成功）
             val gList = mutableListOf<Epg>()
             val epgFiles = Globals.cacheDir.listFiles { pathname ->
                 pathname.isFile && pathname.name.startsWith("epg-")
@@ -119,15 +125,23 @@ class EpgRepository(
                     return@forEach
                 }
 
-                val fileCacheRepository = EpgXmlRepository(file.name)
-                val xmlJson = fileCacheRepository.getCacheData()
+                val cacheRepo = FileCacheRepository(file.name)
+                val jsonData = cacheRepo.getCacheData()
                 try {
-                    xmlJson?.let { Json.decodeFromString<List<Epg>>(it) }?.let { gList.addAll(it) }
+                    jsonData?.let { Json.decodeFromString<List<Epg>>(it) }?.let { list ->
+                        // 内存过滤：仅保留频道列表中存在的频道
+                        if (filteredChannels.isEmpty()) {
+                            gList.addAll(list)
+                        } else {
+                            val lowerFilteredChannels = filteredChannels.map { it.lowercase() }
+                            gList.addAll(list.filter { lowerFilteredChannels.contains(it.channel.lowercase()) })
+                        }
+                    }
                 } catch (_: Exception) {}
             }
-            val groupedItems = gList.groupBy { e->e.channel }
+            val groupedItems = gList.groupBy { e -> e.channel }
                 .map { (channel, itemsInCategory) ->
-                    val combinedValues = itemsInCategory.flatMap {ie-> ie.programmeList }.distinctBy { p->p.startAt }
+                    val combinedValues = itemsInCategory.flatMap { ie -> ie.programmeList }.distinctBy { p -> p.startAt }
                     Epg(channel, EpgProgrammeList(combinedValues))
                 }
             EpgList(groupedItems)
@@ -136,8 +150,46 @@ class EpgRepository(
             throw Exception(ex)
         }
     }
-    fun clearCache() {
 
+    /**
+     * 下载远程 EPG XML，解析后以 JSON 格式写入本地缓存
+     */
+    private suspend fun refreshEpgCache() {
+        val cacheFileName = "epg-${xmlUrl.hashCode().toUInt().toString(16)}.json"
+        val cacheRepo = FileCacheRepository(cacheFileName)
+        val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+
+        cacheRepo.getOrRefresh({ lastModified, _ ->
+            // 如果缓存日期不是今天，则认为已过期需要刷新
+            dateFormat.format(System.currentTimeMillis()) != dateFormat.format(lastModified)
+        }) {
+            log.i("开始下载节目单: $xmlUrl")
+            fetchEpgXml(xmlUrl).use { inputStream ->
+                val epgList = parseFromXml(inputStream)
+                log.i("节目单解析完成，共${epgList.size}个频道")
+                Json.encodeToString(epgList.value)
+            }
+        }
+    }
+
+    /**
+     * 从远程 URL 获取 EPG XML 原始流（支持 .gz 压缩格式）
+     */
+    private suspend fun fetchEpgXml(url: String): java.io.InputStream = withContext(Dispatchers.IO) {
+        log.d("获取远程节目单xml流: $url")
+        val client = getProxyOkHttpClient(url)
+        val request = Request.Builder().url(ChannelUtil.clearAllPrefixFromUrl(url)).build()
+
+        val response = client.newCall(request).execute()
+        if (!response.isSuccessful) {
+            response.close()
+            throw Exception("获取远程节目单xml失败: ${response.code}")
+        }
+        val fetcher = EpgFetcher.instances.first { it.isSupport(url) }
+        fetcher.fetch(response)
+    }
+
+    fun clearCache() {
         val epgFiles = Globals.cacheDir.listFiles { pathname ->
             pathname.isFile && pathname.name.startsWith("epg-")
         }
@@ -153,117 +205,3 @@ class EpgRepository(
     }
 }
 
-/**
- * 节目单xml获取
- */
-private class EpgXmlRepository(fileName:String) : FileCacheRepository(fileName) {
-    private val log = Logger.create(javaClass.simpleName)
-
-    /**
-     * 获取远程xml
-     */
-    private suspend fun fetchXml(url: String): String = withContext(Dispatchers.IO) {
-        log.d("获取远程节目单xml: $url")
-
-        val client = getProxyOkHttpClient(url)
-        val request = Request.Builder().url(ChannelUtil.clearAllPrefixFromUrl(url)).build()
-
-        try {
-            with(client.newCall(request).execute()) {
-                if (!isSuccessful) {
-                    throw Exception("获取远程节目单xml失败: $code")
-                }
-
-                val fetcher = EpgFetcher.instances.first { it.isSupport(url) }
-
-                return@with fetcher.fetch(this)
-            }
-        } catch (ex: Exception) {
-            throw Exception("获取远程节目单xml失败，请检查网络连接", ex)
-        }
-    }
-
-    /**
-     * 获取xml
-     */
-    suspend fun getEpgXml(url: String): String {
-        return getOrRefresh(0) {
-            fetchXml(url)
-        }
-    }
-    /**
-     * 获取节目单列表
-
-    suspend fun getEpgList(
-        filteredChannels: List<String> = emptyList(),
-        refreshTimeThreshold: Int,
-    ): EpgList = withContext(Dispatchers.Default) {
-        try {
-            if (Calendar.getInstance().get(Calendar.HOUR_OF_DAY) < refreshTimeThreshold) {
-                log.i("未到时间点，不刷新节目单")
-                return@withContext EpgList()
-            }
-
-            val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-
-            val xmlJson = getOrRefresh({ lastModified, _ ->
-                dateFormat.format(System.currentTimeMillis()) != dateFormat.format(lastModified)
-            }) {
-                val xmlString = epgXmlRepository.getEpgXml()
-                Json.encodeToString(
-                    parseFromXml(
-                        xmlString,
-                        filteredChannels.map { it.lowercase() },
-                    )
-                )
-            }
-
-            return@withContext Json.decodeFromString(xmlJson)
-        } catch (ex: Exception) {
-            log.e("获取节目单失败", ex)
-            throw Exception(ex)
-        }
-    }
-}
-
-/**
- * 节目单xml获取
- */
-private class EpgXmlRepository(
-    private val url: String
-) : FileCacheRepository("epg-${url.hashCode().toUInt().toString(16)}.xml") {
-    private val log = Logger.create(javaClass.simpleName)
-
-    /**
-     * 获取远程xml
-     */
-    private suspend fun fetchXml(): String {
-        log.i("获取节目单xml: $url")
-
-        val client = OkHttpClient()
-        val request = Request.Builder().url(url).build()
-
-        try {
-            val response = client.newCall(request).await()
-
-            if (!response.isSuccessful) throw Exception("${response.code}: ${response.message}")
-
-            val fetcher = EpgFetcher.instances.first { it.isSupport(url) }
-            return withContext(Dispatchers.IO) {
-                fetcher.fetch(response)
-            }
-        } catch (ex: Exception) {
-            log.e("获取节目单xml失败", ex)
-            throw Exception("获取节目单xml失败，请检查网络连接", ex)
-        }
-    }
-
-    /**
-     * 获取xml
-     */
-    suspend fun getEpgXml(): String {
-        return getOrRefresh(0) {
-            fetchXml()
-        }
-    }*/
-}

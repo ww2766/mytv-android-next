@@ -88,6 +88,7 @@ fun ChannelItemGroupList(
                     index == 0,
                     Modifier.handleKeyEvents(onUp = onUp),
                 ),
+                groupName = channelGroup.name,
                 channelListProvider = remember(channelGroup) { { channelGroup.channelList } },
                 currentChannelProvider = currentChannelProvider,
                 showChannelLogoProvider = showChannelLogoProvider,

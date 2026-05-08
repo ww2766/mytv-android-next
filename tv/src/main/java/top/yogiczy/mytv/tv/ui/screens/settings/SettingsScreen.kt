@@ -14,6 +14,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -34,16 +35,20 @@ fun SettingsScreen(
 ) {
     val childPadding = rememberChildPadding()
     var currentCategory by remember { mutableStateOf(SettingsCategories.entries.first()) }
-    // 引入防抖后的分类状态，避免快速操作时右侧内容频繁重构
+
+    var listHasFocus by remember { mutableStateOf(false) }
     var deferredCategory by remember { mutableStateOf(currentCategory) }
 
-    LaunchedEffect(currentCategory) {
-        // 如果是快速滑动，不立即触发右侧沉重组件的加载
-        delay(200)
-        deferredCategory = currentCategory
+    LaunchedEffect(currentCategory, listHasFocus) {
+        if (!listHasFocus) {
+            // 如果焦点已经移出列表（进入右侧内容区），立即同步分类状态
+            deferredCategory = currentCategory
+        } else {
+            // 否则（在左侧滑动时）执行防抖，避免性能开销
+            delay(150)
+            deferredCategory = currentCategory
+        }
     }
-
-
 
     Box(
         modifier = modifier
@@ -57,7 +62,9 @@ fun SettingsScreen(
             horizontalArrangement = Arrangement.spacedBy(52.dp),
         ) {
             SettingsCategoryList(
-                modifier = Modifier.width(216.dp),
+                modifier = Modifier
+                    .width(216.dp)
+                    .onFocusChanged { listHasFocus = it.hasFocus },
                 currentCategoryProvider = { currentCategory },
                 onCategorySelected = { currentCategory = it },
             )

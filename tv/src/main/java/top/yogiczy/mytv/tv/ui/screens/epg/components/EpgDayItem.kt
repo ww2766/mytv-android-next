@@ -1,15 +1,22 @@
 package top.yogiczy.mytv.tv.ui.screens.epg.components
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.tv.material3.DenseListItem
 import androidx.tv.material3.ListItemDefaults
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
@@ -34,35 +41,61 @@ fun EpgDayItem(
     val dayAfterTomorrow =
         dateFormat.format(System.currentTimeMillis() + 48 * 3600 * 1000)
 
-    DenseListItem(
-        modifier = modifier
-            .handleKeyEvents(onSelect = onDaySelected),
-        colors = ListItemDefaults.colors(
-            selectedContainerColor = MaterialTheme.colorScheme.inverseSurface.copy(0.1f),
-            selectedContentColor = MaterialTheme.colorScheme.onSurface,
-        ),
-        selected = isSelectedProvider(),
-        onClick = {},
-        headlineContent = {
-            val lines = day.split(" ")
+    var isFocused by remember { mutableStateOf(false) }
+    val isSelected = isSelectedProvider()
 
+    val backgroundColor = if (isFocused) {
+        MaterialTheme.colorScheme.onSurface
+    } else if (isSelected) {
+        MaterialTheme.colorScheme.inverseSurface.copy(alpha = 0.1f)
+    } else {
+        androidx.compose.ui.graphics.Color.Transparent
+    }
+
+    val contentColor = if (isFocused) {
+        MaterialTheme.colorScheme.surface
+    } else if (isSelected) {
+        MaterialTheme.colorScheme.onSurface
+    } else {
+        MaterialTheme.colorScheme.onSurface
+    }
+
+    val lines = day.split(" ")
+    val title = when (day) {
+        today -> "今天"
+        tomorrow -> "明天"
+        dayAfterTomorrow -> "后天"
+        else -> lines[0]
+    }
+    val subtitle = if (lines.size > 1) lines[1] else ""
+
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(ListItemDefaults.shape().shape)
+            .background(backgroundColor)
+            .onFocusChanged { isFocused = it.isFocused || it.hasFocus }
+            .focusable()
+            .handleKeyEvents(onSelect = onDaySelected)
+            .padding(vertical = 8.dp, horizontal = 8.dp),
+        horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Text(
+            text = title,
+            color = contentColor,
+            textAlign = TextAlign.Center,
+            style = MaterialTheme.typography.titleMedium,
+        )
+        if (subtitle.isNotEmpty()) {
             Text(
-                when (day) {
-                    today -> "今天"
-                    tomorrow -> "明天"
-                    dayAfterTomorrow -> "后天"
-                    else -> lines[0]
-                },
-                modifier = Modifier.fillMaxWidth(),
+                text = subtitle,
+                color = contentColor.copy(alpha = 0.8f),
                 textAlign = TextAlign.Center,
+                style = MaterialTheme.typography.bodyMedium,
             )
-            Text(
-                lines[1],
-                modifier = Modifier.fillMaxWidth(),
-                textAlign = TextAlign.Center,
-            )
-        },
-    )
+        }
+    }
 }
 
 @Preview

@@ -13,6 +13,6 @@ class XmlEpgFetcher : EpgFetcher {
     }
 
     override suspend fun fetch(response: Response) = withContext(Dispatchers.IO) {
-        response.body!!.string()
+        response.body!!.byteStream()
     }
 }
