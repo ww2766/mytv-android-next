@@ -19,3 +19,8 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+# 腾讯 X5 TBS WebView 混淆规则
+-dontwarn dalvik.system.VMStack
+-dontwarn com.tencent.smtt.**
+-keep class com.tencent.smtt.** { *; }

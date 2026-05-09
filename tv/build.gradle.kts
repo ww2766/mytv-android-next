@@ -24,8 +24,10 @@ android {
             useSupportLibrary = true
         }
 
+        resConfigs("zh")
         ndk {
-            abiFilters.addAll(listOf("armeabi","armeabi-v7a", "arm64-v8a"))
+            abiFilters.clear()
+            abiFilters.addAll(listOf("armeabi-v7a", "arm64-v8a"))
         }
     }
 
@@ -61,14 +63,14 @@ android {
         }
     }
 
-//    splits {
-//        abi {
-//            isEnable = true
-//            isUniversalApk = false
-//            reset()
-//            include("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
-//        }
-//    }
+    splits {
+        abi {
+            isEnable = true
+            isUniversalApk = true
+            reset()
+            include("armeabi-v7a", "arm64-v8a")
+        }
+    }
 }
 
 dependencies {
