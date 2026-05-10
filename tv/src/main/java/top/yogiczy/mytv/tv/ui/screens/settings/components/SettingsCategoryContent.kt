@@ -1,6 +1,5 @@
 package top.yogiczy.mytv.tv.ui.screens.settings.components
 
-import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
@@ -12,7 +11,6 @@ import androidx.tv.material3.Text
 import top.yogiczy.mytv.core.data.entities.channel.ChannelGroupList
 import top.yogiczy.mytv.tv.ui.rememberChildPadding
 import top.yogiczy.mytv.tv.ui.screens.settings.SettingsCategories
-import top.yogiczy.mytv.tv.ui.utils.saveFocusRestorer
 
 @Composable
 fun SettingsCategoryContent(
@@ -35,7 +33,6 @@ fun SettingsCategoryContent(
             SettingsCategories.IPTV -> SettingsCategoryIptv(
                 channelGroupListProvider = channelGroupListProvider,
             )
-
             SettingsCategories.EPG -> SettingsCategoryEpg()
             SettingsCategories.EPG_RESERVE -> SettingsCategoryEpgReserve()
             SettingsCategories.UI -> SettingsCategoryUI()

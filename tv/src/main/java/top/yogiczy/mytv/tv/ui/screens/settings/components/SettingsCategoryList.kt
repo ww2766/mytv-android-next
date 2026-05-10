@@ -125,7 +125,16 @@ private fun SettingsCategoryItem(
             .handleKeyEvents(
                 isFocused = { isFocused },
                 focusRequester = focusRequester,
-                onSelect = { focusManager.moveFocus(FocusDirection.Right) },
+                onRight = {
+                    // 立即同步分类，不依赖 50ms 定时器
+                    onCategorySelected()
+                    focusManager.moveFocus(FocusDirection.Right)
+                },
+                onSelect = {
+                    // 确认键同样立即同步分类
+                    onCategorySelected()
+                    focusManager.moveFocus(FocusDirection.Right)
+                },
             )
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
