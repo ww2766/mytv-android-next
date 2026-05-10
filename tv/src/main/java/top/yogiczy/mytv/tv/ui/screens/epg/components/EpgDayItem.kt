@@ -74,7 +74,11 @@ fun EpgDayItem(
             .fillMaxWidth()
             .clip(ListItemDefaults.shape().shape)
             .background(backgroundColor)
-            .onFocusChanged { isFocused = it.isFocused || it.hasFocus }
+            .onFocusChanged {
+                val focused = it.isFocused || it.hasFocus
+                if (focused && !isFocused) onDaySelected()
+                isFocused = focused
+            }
             .focusable()
             .handleKeyEvents(onSelect = onDaySelected)
             .padding(vertical = 8.dp, horizontal = 8.dp),
