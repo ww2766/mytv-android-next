@@ -86,6 +86,8 @@ fun QuickOpScreen(
     onClearCache: () -> Unit = {},
     onClose: () -> Unit = {},
 ) {
+
+
     val screenAutoCloseState = rememberScreenAutoCloseState(onTimeout = onClose)
 
     Box(

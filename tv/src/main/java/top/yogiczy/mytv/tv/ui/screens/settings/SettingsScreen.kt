@@ -26,6 +26,10 @@ import top.yogiczy.mytv.tv.ui.screens.settings.components.SettingsCategoryList
 import top.yogiczy.mytv.tv.ui.utils.captureBackKey
 import top.yogiczy.mytv.tv.ui.utils.customBackground
 
+import androidx.compose.foundation.focusGroup
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
+
 @Composable
 fun SettingsScreen(
     modifier: Modifier = Modifier,
@@ -33,6 +37,8 @@ fun SettingsScreen(
     onClose: () -> Unit = {},
     settingsViewModel: SettingsViewModel = viewModel(),
 ) {
+
+
     val childPadding = rememberChildPadding()
     var currentCategory by remember { mutableStateOf(SettingsCategories.entries.first()) }
 
@@ -52,6 +58,8 @@ fun SettingsScreen(
 
     Box(
         modifier = modifier
+            .focusGroup()
+            .focusProperties { exit = { FocusRequester.Cancel } }
             .captureBackKey { onClose() }
             .pointerInput(Unit) { detectTapGestures { } }
             .fillMaxSize()

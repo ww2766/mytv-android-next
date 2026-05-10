@@ -116,7 +116,7 @@ class EpgRepository(
             val gList = mutableListOf<Epg>()
             val epgFiles = Globals.cacheDir.listFiles { pathname ->
                 pathname.isFile && pathname.name.startsWith("epg-")
-            }
+            }?.sortedByDescending { it.lastModified() }
 
             epgFiles?.forEach { file ->
                 // 清理超过 7 天的旧缓存
@@ -141,7 +141,9 @@ class EpgRepository(
             }
             val groupedItems = gList.groupBy { e -> e.channel }
                 .map { (channel, itemsInCategory) ->
-                    val combinedValues = itemsInCategory.flatMap { ie -> ie.programmeList }.distinctBy { p -> p.startAt }
+                    val combinedValues = itemsInCategory.flatMap { ie -> ie.programmeList }
+                        .distinctBy { p -> p.startAt }
+                        .sortedBy { p -> p.startAt }
                     Epg(channel, EpgProgrammeList(combinedValues))
                 }
             EpgList(groupedItems)
@@ -155,7 +157,8 @@ class EpgRepository(
      * 下载远程 EPG XML，解析后以 JSON 格式写入本地缓存
      */
     private suspend fun refreshEpgCache() {
-        val cacheFileName = "epg-${xmlUrl.hashCode().toUInt().toString(16)}.json"
+        val today = SimpleDateFormat("yyyyMMdd", Locale.getDefault()).format(System.currentTimeMillis())
+        val cacheFileName = "epg-${xmlUrl.hashCode().toUInt().toString(16)}-$today.json"
         val cacheRepo = FileCacheRepository(cacheFileName)
         val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
 

@@ -24,6 +24,8 @@ fun ChannelUrlScreen(
     onUrlSelected: (String) -> Unit = {},
     onClose: () -> Unit = {},
 ) {
+
+
     val screenAutoCloseState = rememberScreenAutoCloseState(onTimeout = onClose)
 
     Drawer(

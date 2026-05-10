@@ -24,6 +24,8 @@ fun VideoPlayerDisplayModeScreen(
     onApplyToGlobal: (() -> Unit)? = null,
     onClose: () -> Unit = {},
 ) {
+
+
     val screenAutoCloseState = rememberScreenAutoCloseState(onTimeout = onClose)
 
     Drawer(

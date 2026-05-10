@@ -98,10 +98,35 @@ fun MainContent(
             mainContentState.changeCurrentChannel(channel)
         }
     }
+
+    val handleBackPressed = {
+        val hasVisiblePopup = mainContentState.isTempChannelScreenVisible ||
+                mainContentState.isChannelScreenVisible ||
+                mainContentState.isSettingsScreenVisible ||
+                mainContentState.isQuickOpScreenVisible ||
+                mainContentState.isEpgScreenVisible ||
+                mainContentState.isChannelUrlScreenVisible ||
+                mainContentState.isVideoPlayerControllerScreenVisible ||
+                mainContentState.isVideoPlayerDisplayModeScreenVisible
+
+        if (hasVisiblePopup) {
+            mainContentState.isTempChannelScreenVisible = false
+            mainContentState.isChannelScreenVisible = false
+            mainContentState.isSettingsScreenVisible = false
+            mainContentState.isQuickOpScreenVisible = false
+            mainContentState.isEpgScreenVisible = false
+            mainContentState.isChannelUrlScreenVisible = false
+            mainContentState.isVideoPlayerControllerScreenVisible = false
+            mainContentState.isVideoPlayerDisplayModeScreenVisible = false
+        } else {
+            onBackPressed()
+        }
+    }
+
     Box(
         modifier = modifier
             .popupable()
-            .captureBackKey { onBackPressed() }
+            .captureBackKey { handleBackPressed() }
             .focusable(false)
     ) {
         VideoPlayerScreen(
@@ -168,7 +193,7 @@ fun MainContent(
             .fillMaxSize()
             .alpha(0f)
             .popupable()
-            .captureBackKey { onBackPressed() }
+            .captureBackKey { handleBackPressed() }
             .handleKeyEvents(
                 onUp = {
                     if (settingsViewModel.iptvChannelChangeFlip) mainContentState.changeCurrentChannelToNext()

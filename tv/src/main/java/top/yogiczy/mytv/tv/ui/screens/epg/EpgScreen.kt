@@ -41,6 +41,8 @@ fun EpgScreen(
     onEpgProgrammeReserve: (EpgProgramme) -> Unit = {},
     onClose: () -> Unit = {},
 ) {
+
+
     val screenAutoCloseState = rememberScreenAutoCloseState(onTimeout = onClose)
 
     val dateFormat = SimpleDateFormat("E MM-dd", Locale.getDefault())

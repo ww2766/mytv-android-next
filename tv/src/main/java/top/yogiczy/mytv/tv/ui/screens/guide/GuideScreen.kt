@@ -40,6 +40,8 @@ fun GuideScreen(
     modifier: Modifier = Modifier,
     onClose: () -> Unit = {},
 ) {
+
+
     var activeKey by remember { mutableStateOf(GuideTvRemoteKeys.OK) }
 
     Row(

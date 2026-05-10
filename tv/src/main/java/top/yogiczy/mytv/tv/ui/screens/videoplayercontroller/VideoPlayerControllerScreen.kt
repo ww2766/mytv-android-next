@@ -35,6 +35,8 @@ fun VideoPlayerControllerScreen(
     onVideoPlayerSeekTo: (Long) -> Unit = {},
     onClose: () -> Unit = {},
 ) {
+
+
     Drawer(
         modifier = modifier.captureBackKey { onClose() },
         onDismissRequest = onClose,
