@@ -75,7 +75,7 @@ fun EpgProgrammeItem(
             .focusable()
             .handleKeyEvents(
                 onSelect = {
-                    if (programme.endAt < System.currentTimeMillis() && supportPlaybackProvider()) onPlayback()
+                    if (programme.startAt < System.currentTimeMillis() && supportPlaybackProvider()) onPlayback()
                     else if (programme.startAt > System.currentTimeMillis()) onReserve()
                 }
             )
@@ -98,7 +98,7 @@ fun EpgProgrammeItem(
                 Icon(Icons.Default.PlayArrow, contentDescription = null)
             } else if (isPlaybackProvider()) {
                 Text("正在回放", style = MaterialTheme.typography.bodyMedium)
-            } else if (programme.endAt < System.currentTimeMillis() && supportPlaybackProvider()) {
+            } else if (programme.startAt < System.currentTimeMillis() && supportPlaybackProvider()) {
                 Text("回放", style = MaterialTheme.typography.bodyMedium)
             } else if (programme.startAt > System.currentTimeMillis()) {
                 if (hasReservedProvider()) Text("已预约", style = MaterialTheme.typography.bodyMedium)

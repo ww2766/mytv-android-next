@@ -52,6 +52,7 @@ abstract class VideoPlayer(
     private val onCurrentPositionChanged = mutableListOf<(position: Long) -> Unit>()
     private val onMetadataListeners = mutableListOf<(metadata: Metadata) -> Unit>()
     private val onInterruptListeners = mutableListOf<() -> Unit>()
+    private val onCompletionListeners = mutableListOf<() -> Unit>()
 
     private fun clearAllListeners() {
         onResolutionListeners.clear()
@@ -64,6 +65,7 @@ abstract class VideoPlayer(
         onCurrentPositionChanged.clear()
         onMetadataListeners.clear()
         onInterruptListeners.clear()
+        onCompletionListeners.clear()
     }
 
     protected fun triggerResolution(width: Int, height: Int) {
@@ -161,6 +163,14 @@ abstract class VideoPlayer(
 
     fun onInterrupt(listener: () -> Unit) {
         onInterruptListeners.add(listener)
+    }
+
+    fun onCompletion(listener: () -> Unit) {
+        onCompletionListeners.add(listener)
+    }
+
+    protected fun triggerCompletion() {
+        onCompletionListeners.forEach { it() }
     }
 
     data class PlaybackException(val errorCodeName: String, val errorCode: Int) :

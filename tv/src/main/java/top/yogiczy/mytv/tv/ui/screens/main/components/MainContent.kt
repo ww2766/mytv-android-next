@@ -85,6 +85,7 @@ fun MainContent(
     val mainContentState = rememberMainContentState(
         videoPlayerState = videoPlayerState,
         channelGroupListProvider = filteredChannelGroupListProvider,
+        epgListProvider = epgListProvider,
     )
     // 预计算收藏频道列表并缓存，避免每次重组时重新 filter
     val favoriteChannelNameList = settingsViewModel.iptvChannelFavoriteList

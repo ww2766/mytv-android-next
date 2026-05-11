@@ -8,6 +8,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.CoroutineScope
@@ -16,7 +17,11 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import top.yogiczy.mytv.core.data.entities.channel.Channel
 import top.yogiczy.mytv.core.data.entities.channel.ChannelGroupList
+import top.yogiczy.mytv.core.data.entities.epg.Epg
+import top.yogiczy.mytv.core.data.entities.epg.EpgList
+import top.yogiczy.mytv.core.data.entities.epg.EpgList.Companion.match
 import top.yogiczy.mytv.core.data.entities.epg.EpgProgramme
+import top.yogiczy.mytv.core.data.entities.epg.EpgProgramme.Companion.isLive
 import top.yogiczy.mytv.core.data.entities.epg.EpgProgrammeReserve
 import top.yogiczy.mytv.core.data.entities.epg.EpgProgrammeReserveList
 import top.yogiczy.mytv.core.data.utils.ChannelUtil
@@ -38,6 +43,7 @@ class MainContentState(
     private val coroutineScope: CoroutineScope,
     private val videoPlayerState: VideoPlayerState,
     private val channelGroupListProvider: () -> ChannelGroupList = { ChannelGroupList() },
+    private val epgListProvider: () -> EpgList = { EpgList() },
     private val settingsViewModel: SettingsViewModel,
 ) : Loggable() {
     private var _currentChannel by mutableStateOf(Channel())
@@ -143,6 +149,35 @@ class MainContentState(
                 _currentChannelUrlIdx,
                 _currentPlaybackEpgProgramme
             )
+        }
+
+        videoPlayerState.onCompletion {
+            _currentPlaybackEpgProgramme?.let { current ->
+                val epg = epgListProvider().match(_currentChannel)
+                val programmeList = epg?.programmeList ?: emptyList()
+                
+                // 1. 尝试通过开始时间定位索引
+                var currentIndex = programmeList.indexOfFirst { it.startAt == current.startAt }
+                
+                // 2. 如果找不到精确匹配，尝试通过时间范围定位
+                if (currentIndex == -1) {
+                    currentIndex = programmeList.indexOfFirst { current.startAt in it.startAt until it.endAt }
+                }
+
+                if (currentIndex != -1 && currentIndex < programmeList.size - 1) {
+                    val nextProgramme = programmeList[currentIndex + 1]
+                    
+                    if (nextProgramme.isLive()) {
+                        changeCurrentChannel(_currentChannel, _currentChannelUrlIdx, null)
+                    } else if (nextProgramme.startAt < System.currentTimeMillis()) {
+                        changeCurrentChannel(_currentChannel, _currentChannelUrlIdx, nextProgramme)
+                    } else {
+                        changeCurrentChannel(_currentChannel, _currentChannelUrlIdx, null)
+                    }
+                } else {
+                    changeCurrentChannel(_currentChannel, _currentChannelUrlIdx, null)
+                }
+            }
         }
     }
 
@@ -260,19 +295,25 @@ class MainContentState(
                 val tmpL=tmp.split("{")
                 val tmpL1=tmpL.getOrElse(1){""}.split("}")
                 val tmpL2=tmpL.getOrElse(2){""}.split("}")
-                var ret=tmpL.getOrElse(0){""}
-                ret+= _currentPlaybackEpgProgramme?.let { formatProgrammeDateTimeString(it.startAt,tmpL1.getOrElse(0){""}) }
-                ret+=tmpL1.getOrElse(1){""}
-                ret+= _currentPlaybackEpgProgramme?.let { formatProgrammeDateTimeString(it.endAt,tmpL2.getOrElse(0){""}) }
-                ret+=tmpL2.getOrElse(1){""}
-                url=ret
+                var ret = tmpL.getOrElse(0) { "" }
+                ret += _currentPlaybackEpgProgramme?.let {
+                    formatProgrammeDateTimeString(it.startAt, tmpL1.getOrElse(0) { "" })
+                }
+                ret += tmpL1.getOrElse(1) { "" }
+                ret += _currentPlaybackEpgProgramme?.let {
+                    val endAt = min(it.endAt, System.currentTimeMillis())
+                    formatProgrammeDateTimeString(endAt, tmpL2.getOrElse(0) { "" })
+                }
+                ret += tmpL2.getOrElse(1) { "" }
+                url = ret
             }else {
                 val timeFormat = SimpleDateFormat("yyyyMMddHHmmss", Locale.getDefault())
+                val endAt = min(_currentPlaybackEpgProgramme!!.endAt, System.currentTimeMillis())
                 val query = listOf(
                     "playseek=",
                     timeFormat.format(_currentPlaybackEpgProgramme!!.startAt),
                     "-",
-                    timeFormat.format(_currentPlaybackEpgProgramme!!.endAt),
+                    timeFormat.format(endAt),
                 ).joinToString("")
                 url = if (URI(url).query.isNullOrBlank()) "$url?$query" else "$url&$query"
                 url = ChannelUtil.urlToCanPlayback(url)
@@ -361,14 +402,21 @@ fun rememberMainContentState(
     coroutineScope: CoroutineScope = rememberCoroutineScope(),
     videoPlayerState: VideoPlayerState = rememberVideoPlayerState(),
     channelGroupListProvider: () -> ChannelGroupList = { ChannelGroupList() },
+    epgListProvider: () -> EpgList = { EpgList() },
     settingsViewModel: SettingsViewModel = viewModel(),
-) = remember {
-    MainContentState(
-        coroutineScope = coroutineScope,
-        videoPlayerState = videoPlayerState,
-        channelGroupListProvider = channelGroupListProvider,
-        settingsViewModel = settingsViewModel,
-    )
+): MainContentState {
+    val currentChannelGroupListProvider by rememberUpdatedState(channelGroupListProvider)
+    val currentEpgListProvider by rememberUpdatedState(epgListProvider)
+
+    return remember {
+        MainContentState(
+            coroutineScope = coroutineScope,
+            videoPlayerState = videoPlayerState,
+            channelGroupListProvider = { currentChannelGroupListProvider() },
+            epgListProvider = { currentEpgListProvider() },
+            settingsViewModel = settingsViewModel,
+        )
+    }
 }
 
 private fun getUrlHost(url: String): String {

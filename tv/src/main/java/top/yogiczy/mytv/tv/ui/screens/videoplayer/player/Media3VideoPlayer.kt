@@ -204,7 +204,7 @@ class Media3VideoPlayer(
                         } else if (contentTypeAttempts[C.CONTENT_TYPE_OTHER] != true) {
                             preparePlay(it, C.CONTENT_TYPE_OTHER)
                         } else {
-                            val type = Util.inferContentType(it)
+                            val type = Util.inferContentType(Uri.parse(it))
                             triggerError(
                                 PlaybackException.UNSUPPORTED_TYPE.copy(
                                     errorCodeName = "${PlaybackException.UNSUPPORTED_TYPE.message}_$type"
@@ -257,6 +257,10 @@ class Media3VideoPlayer(
 
             if (playbackState != Player.STATE_BUFFERING) {
                 triggerBuffering(false)
+            }
+
+            if (playbackState == Player.STATE_ENDED) {
+                triggerCompletion()
             }
         }
 
