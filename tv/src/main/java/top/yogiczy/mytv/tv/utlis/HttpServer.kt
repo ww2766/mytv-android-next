@@ -193,6 +193,7 @@ object HttpServer : Loggable() {
         newIptvSource?.let {
             Configs.iptvSourceList = IptvSourceList(Configs.iptvSourceList + it)
             Configs.iptvSourceCurrent = it
+            Configs.configRefreshSignal.tryEmit(Unit)
         }
 
         wrapResponse(response).send("success")
@@ -211,6 +212,7 @@ object HttpServer : Loggable() {
 
         Configs.proxyUri = proxyUri
         Configs.proxySites = proxySites
+        Configs.configRefreshSignal.tryEmit(Unit)
 
         wrapResponse(response).send("success")
     }
@@ -225,6 +227,7 @@ object HttpServer : Loggable() {
         EpgSource(name, url).let {
             Configs.epgSourceList = EpgSourceList(Configs.epgSourceList + it)
             Configs.epgSourceCurrent = it
+            Configs.configRefreshSignal.tryEmit(Unit)
         }
 
         wrapResponse(response).send("success")
@@ -238,6 +241,7 @@ object HttpServer : Loggable() {
         val ua = body.get("ua").toString()
 
         Configs.videoPlayerUserAgent = ua
+        Configs.configRefreshSignal.tryEmit(Unit)
 
         wrapResponse(response).send("success")
     }
@@ -343,6 +347,7 @@ object HttpServer : Loggable() {
         Configs.videoPlayerDisplayMode = configs.videoPlayerDisplayMode
         Configs.proxyUri = configs.proxyUri
         Configs.proxySites = configs.proxySites
+        Configs.configRefreshSignal.tryEmit(Unit)
 
         wrapResponse(response).send("success")
     }

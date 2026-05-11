@@ -377,6 +377,12 @@ class SettingsViewModel : ViewModel() {
                 System.currentTimeMillis() < it.startAt + 60 * 1000
             }
         )
+
+        viewModelScope.launch {
+            Configs.configRefreshSignal.collect {
+                refresh()
+            }
+        }
     }
 
     fun refresh() {

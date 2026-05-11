@@ -32,6 +32,12 @@ class MainViewModel : ViewModel() {
 
     init {
         init()
+
+        viewModelScope.launch {
+            Configs.configRefreshSignal.collect {
+                init()
+            }
+        }
     }
 
     fun init() {

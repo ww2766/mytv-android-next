@@ -1,5 +1,6 @@
 package top.yogiczy.mytv.tv.ui.utils
 
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import top.yogiczy.mytv.core.data.entities.epg.EpgProgrammeReserveList
@@ -15,6 +16,8 @@ import top.yogiczy.mytv.tv.ui.screens.videoplayer.VideoPlayerDisplayMode
  * 应用配置
  */
 object Configs {
+    val configRefreshSignal = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+
     enum class KEY {
         /** ==================== 应用 ==================== */
         /** 开机自启 */
