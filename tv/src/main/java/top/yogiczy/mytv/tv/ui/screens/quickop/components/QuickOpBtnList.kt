@@ -45,6 +45,13 @@ fun QuickOpBtnList(
         item {
             QuickOpBtn(
                 modifier = Modifier.focusOnLaunched(),
+                title = { Text("播放控制") },
+                onSelect = onShowVideoPlayerController,
+            )
+        }
+
+        item {
+            QuickOpBtn(
                 title = { Text("节目单") },
                 onSelect = onShowEpg,
             )
@@ -54,13 +61,6 @@ fun QuickOpBtnList(
             QuickOpBtn(
                 title = { Text("多线路") },
                 onSelect = onShowChannelUrl,
-            )
-        }
-
-        item {
-            QuickOpBtn(
-                title = { Text("播放控制") },
-                onSelect = onShowVideoPlayerController,
             )
         }
 

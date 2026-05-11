@@ -1,8 +1,10 @@
 package top.yogiczy.mytv.tv.ui.screens.videoplayercontroller.components
 
+import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.unit.dp
 import androidx.tv.material3.Icon
 import androidx.tv.material3.IconButton
 import top.yogiczy.mytv.tv.ui.utils.handleKeyEvents
@@ -15,6 +17,7 @@ fun VideoPlayerControllerBtn(
 ) {
     IconButton(
         modifier = modifier
+            .size(30.dp)
             .handleKeyEvents(onSelect = onSelect),
         onClick = {},
     ) {
@@ -31,6 +34,12 @@ fun VideoPlayerControllerBtn(
     VideoPlayerControllerBtn(
         modifier = modifier,
         onSelect = onSelect,
-        content = { Icon(imageVector = imageVector, contentDescription = null) },
+        content = {
+            Icon(
+                modifier = Modifier.size(18.dp),
+                imageVector = imageVector,
+                contentDescription = null,
+            )
+        },
     )
 }

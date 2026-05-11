@@ -76,7 +76,7 @@ fun VideoPlayerControllerPositionCtrl(
 
     Row(
         modifier = modifier,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         VideoPlayerControllerBtn(
@@ -99,7 +99,7 @@ fun VideoPlayerControllerPositionCtrl(
         )
 
         VideoPlayerControllerPositionProgress(
-            modifier = Modifier.padding(start = 10.dp),
+            modifier = Modifier.padding(start = 20.dp),
             currentPositionProvider = { seekToPosition ?: currentPositionProvider() },
             durationProvider = durationProvider,
         )
@@ -118,7 +118,7 @@ private fun VideoPlayerControllerPositionProgress(
 
     Row(
         modifier = modifier,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(

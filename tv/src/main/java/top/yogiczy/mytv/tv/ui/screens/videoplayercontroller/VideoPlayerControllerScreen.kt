@@ -45,8 +45,8 @@ fun VideoPlayerControllerScreen(
         //header = { Text("播放控制") },
     ) {
         Row(
-            modifier = Modifier.padding(top = 0.dp).background(Color.Transparent),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            modifier = Modifier.padding(start = 10.dp, end = 10.dp, top = 0.dp).background(Color.Transparent),
+            horizontalArrangement = Arrangement.spacedBy(20.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             VideoPlayerControllerStateCtrl(

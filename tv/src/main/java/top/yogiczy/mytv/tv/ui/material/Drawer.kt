@@ -13,6 +13,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -52,7 +53,12 @@ fun Drawer(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .padding(24.dp)
+            .padding(
+                start = 24.dp,
+                end = 24.dp,
+                top = 24.dp,
+                bottom = if (position == DrawerPosition.Bottom) 0.dp else 24.dp,
+            )
             .pointerInput(Unit) { detectTapGestures { onDismissRequest?.invoke() } },
     ) {
         Box(
@@ -61,9 +67,9 @@ fun Drawer(
                 .then(positionModifier)
                 .background(
                     color = containerColor,
-                    shape = MaterialTheme.shapes.large,
+                    shape = if (position == DrawerPosition.Bottom) RectangleShape else MaterialTheme.shapes.large,
                 )
-                .padding(20.dp)
+                .padding(if (position == DrawerPosition.Bottom) 12.dp else 20.dp)
         ) {
             Column {
                 header?.let { nnHeader ->

@@ -31,21 +31,22 @@ fun VideoPlayerControllerStateCtrl(
     VideoPlayerControllerBtn(
         modifier = modifier,
         onSelect = {
-            if (!isBuffering) {
-                if (isPlaying) onPause()
+            if (!isBufferingProvider()) {
+                if (isPlayingProvider()) onPause()
                 else onPlay()
             }
         },
     ) {
         if (isBuffering) {
             CircularProgressIndicator(
-                modifier = Modifier.size(20.dp),
-                strokeWidth = 3.dp,
+                modifier = Modifier.size(18.dp),
+                strokeWidth = 2.dp,
                 color = LocalContentColor.current,
                 trackColor = Color.Transparent,
             )
         } else {
             Icon(
+                modifier = Modifier.size(18.dp),
                 imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                 contentDescription = null,
             )

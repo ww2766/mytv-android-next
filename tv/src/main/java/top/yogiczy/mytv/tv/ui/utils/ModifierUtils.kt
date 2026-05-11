@@ -150,9 +150,9 @@ fun Modifier.clickableNoIndication(
 
     pointerInput(Unit) {
         detectTapGestures(
-            onDoubleTap = currentOnDoubleClick?.let { { _ -> it() } },
-            onLongPress = currentOnLongClick?.let { { _ -> it() } },
-            onTap = currentOnClick?.let { { _ -> it() } },
+            onDoubleTap = if (onDoubleClick != null) { _ -> currentOnDoubleClick?.invoke() } else null,
+            onLongPress = if (onLongClick != null) { _ -> currentOnLongClick?.invoke() } else null,
+            onTap = if (onClick != null) { _ -> currentOnClick?.invoke() } else null,
         )
     }
 }
