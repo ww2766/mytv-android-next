@@ -41,7 +41,14 @@ fun EpgProgrammeItemList(
     val epgProgrammeList = epgProgrammeListProvider()
     val itemFocusRequesterMap = remember(epgProgrammeList) { mutableMapOf<Int, FocusRequester>() }
 
-    val listState = LazyListState(max(0, epgProgrammeList.indexOfFirst { it.isLive() } - 2))
+    val currentPlayback = currentPlaybackProvider()
+    val initialIndex = remember(epgProgrammeList, currentPlayback) {
+        val playbackIndex = epgProgrammeList.indexOf(currentPlayback)
+        if (playbackIndex != -1) playbackIndex
+        else max(0, epgProgrammeList.indexOfFirst { it.isLive() })
+    }
+
+    val listState = remember(epgProgrammeList) { LazyListState(max(0, initialIndex - 2)) }
     LaunchedEffect(listState) {
         snapshotFlow { listState.isScrollInProgress }
             .distinctUntilChanged()
@@ -52,7 +59,7 @@ fun EpgProgrammeItemList(
         modifier = modifier,
         // FIXME 闪退
         // .focusRestorer {
-        //     itemFocusRequesterList[max(0, epgProgrammeList.indexOfFirst { it.isLive() })]
+        //     itemFocusRequesterMap[initialIndex] ?: FocusRequester.Default
         // },
         state = listState,
         contentPadding = PaddingValues(vertical = 8.dp),
@@ -75,7 +82,7 @@ fun EpgProgrammeItemList(
                 hasReservedProvider = { hasReserved },
                 onPlayback = { onPlayback(programme) },
                 onReserve = { onReserve(programme) },
-                focusOnLive = focusOnLive,
+                isInitialFocusProvider = { focusOnLive && index == initialIndex },
             )
         }
     }

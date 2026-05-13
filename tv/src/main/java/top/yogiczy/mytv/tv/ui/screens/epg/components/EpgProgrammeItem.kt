@@ -41,7 +41,7 @@ fun EpgProgrammeItem(
     hasReservedProvider: () -> Boolean = { false },
     onPlayback: () -> Unit = {},
     onReserve: () -> Unit = {},
-    focusOnLive: Boolean = true,
+    isInitialFocusProvider: () -> Boolean = { false },
 ) {
     val programme = epgProgrammeProvider()
     val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
@@ -67,7 +67,7 @@ fun EpgProgrammeItem(
 
     Row(
         modifier = modifier
-            .ifElse(isLive && focusOnLive, Modifier.focusOnLaunchedSaveable())
+            .ifElse(isInitialFocusProvider(), Modifier.focusOnLaunchedSaveable())
             .fillMaxWidth()
             .clip(ListItemDefaults.shape().shape)
             .background(backgroundColor)
