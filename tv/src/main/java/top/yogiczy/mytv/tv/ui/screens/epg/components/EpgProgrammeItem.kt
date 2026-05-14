@@ -42,6 +42,7 @@ fun EpgProgrammeItem(
     onPlayback: () -> Unit = {},
     onReserve: () -> Unit = {},
     isInitialFocusProvider: () -> Boolean = { false },
+    onFocused: () -> Unit = {},
 ) {
     val programme = epgProgrammeProvider()
     val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
@@ -71,7 +72,10 @@ fun EpgProgrammeItem(
             .fillMaxWidth()
             .clip(ListItemDefaults.shape().shape)
             .background(backgroundColor)
-            .onFocusChanged { isFocused = it.isFocused || it.hasFocus }
+            .onFocusChanged {
+                isFocused = it.isFocused || it.hasFocus
+                if (isFocused) onFocused()
+            }
             .focusable()
             .handleKeyEvents(
                 onSelect = {

@@ -9,7 +9,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -40,12 +43,28 @@ fun EpgProgrammeItemList(
 ) {
     val epgProgrammeList = epgProgrammeListProvider()
     val itemFocusRequesterMap = remember(epgProgrammeList) { mutableMapOf<Int, FocusRequester>() }
+    var hasInitialFocused by rememberSaveable { mutableStateOf(false) }
 
     val currentPlayback = currentPlaybackProvider()
     val initialIndex = remember(epgProgrammeList, currentPlayback) {
-        val playbackIndex = epgProgrammeList.indexOf(currentPlayback)
+        val playbackIndex = epgProgrammeList.indexOfFirst {
+            it.startAt == currentPlayback?.startAt &&
+                    it.title == currentPlayback?.title &&
+                    it.endAt == currentPlayback?.endAt
+        }
+
         if (playbackIndex != -1) playbackIndex
-        else max(0, epgProgrammeList.indexOfFirst { it.isLive() })
+        else {
+            val now = System.currentTimeMillis()
+            val liveIndex = epgProgrammeList.indexOfFirst { it.isLive() }
+
+            if (liveIndex != -1) liveIndex
+            else {
+                val nextIndex = epgProgrammeList.indexOfFirst { it.startAt > now }
+                if (nextIndex != -1) nextIndex
+                else max(0, epgProgrammeList.size - 1)
+            }
+        }
     }
 
     val listState = remember(epgProgrammeList) { LazyListState(max(0, initialIndex - 2)) }
@@ -67,7 +86,7 @@ fun EpgProgrammeItemList(
     ) {
         itemsIndexed(
             epgProgrammeList,
-            key = { _, programme -> programme.hashCode() },
+            key = { _, programme -> programme.startAt },
         ) { index, programme ->
             val focusRequester = remember(index) { itemFocusRequesterMap.getOrPut(index) { FocusRequester() } }
             
@@ -82,7 +101,8 @@ fun EpgProgrammeItemList(
                 hasReservedProvider = { hasReserved },
                 onPlayback = { onPlayback(programme) },
                 onReserve = { onReserve(programme) },
-                isInitialFocusProvider = { focusOnLive && index == initialIndex },
+                isInitialFocusProvider = { focusOnLive && !hasInitialFocused && index == initialIndex },
+                onFocused = { hasInitialFocused = true },
             )
         }
     }

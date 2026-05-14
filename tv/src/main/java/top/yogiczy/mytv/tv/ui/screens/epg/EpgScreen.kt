@@ -4,9 +4,11 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
@@ -50,7 +52,17 @@ fun EpgScreen(
     val programDayGroup = remember(epg) {
         epg.programmeList.groupBy { dateFormat.format(it.startAt) }
     }
-    var currentDay by remember { mutableStateOf(dateFormat.format(System.currentTimeMillis())) }
+    var currentDay by rememberSaveable { mutableStateOf("") }
+    LaunchedEffect(epg) {
+        if (currentDay.isEmpty() && epg.programmeList.isNotEmpty()) {
+            val currentPlayback = currentPlaybackEpgProgrammeProvider()
+            currentDay = if (currentPlayback != null && epg.programmeList.any { it.startAt == currentPlayback.startAt }) {
+                dateFormat.format(currentPlayback.startAt)
+            } else {
+                dateFormat.format(System.currentTimeMillis())
+            }
+        }
+    }
 
     Drawer(
         modifier = modifier
