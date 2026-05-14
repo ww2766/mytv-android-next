@@ -89,7 +89,8 @@ fun X5WebViewComponent(
 
                     layoutParams = params
                     setOnKeyListener { _, keyCode, event ->
-                        true // 全局按键拦截
+                        if (keyCode == KeyEvent.KEYCODE_F) false // 放行 F 键，供 JS 层触发全屏
+                        else true // 拦截其他按键，避免焦点冲突
                     }
                     setOnClickListener { true }
                     setOnDragListener { v, event -> true }
@@ -106,8 +107,10 @@ fun X5WebViewComponent(
                                 """
                                                     
                                                                         console.log('Plugin enter.');
+                                                                        if (window.__myPluginInitialized) return;
+                                                                        window.__myPluginInitialized = true;
                                                                         ;(async () => {
-                                                                            console.log('Plugin enter.');
+                                                                            console.log('Plugin enter async.');
                                                                             // 标记是否有用户交互
                                                                             let userInteracted = false;
                                                                             // 标记是否网页内全屏
@@ -390,6 +393,12 @@ fun X5WebViewComponent(
                             }
                         }
 
+                        override fun onHideCustomView() {
+                            customViewCallback?.onCustomViewHidden()
+                            customView = null
+                            customViewCallback = null
+                        }
+
                         override fun onJsAlert(
                             view: WebView?,
                             url: String?,
@@ -496,29 +505,29 @@ class X5MyWebViewInterface(
 
     @JavascriptInterface
     fun clickKeyCodeF() {
-        //webView.requestFocus()
-        val downTime = SystemClock.uptimeMillis()
-        webView.dispatchKeyEvent(
-            KeyEvent(
-                downTime,
-                downTime,
-                KeyEvent.ACTION_DOWN,
-                KeyEvent.KEYCODE_F,
-                0
+        webView.post {
+            webView.requestFocus()
+            val downTime = SystemClock.uptimeMillis()
+            webView.dispatchKeyEvent(
+                KeyEvent(
+                    downTime,
+                    downTime,
+                    KeyEvent.ACTION_DOWN,
+                    KeyEvent.KEYCODE_F,
+                    0
+                )
             )
-        )
-        sleep(10)
-        webView.dispatchKeyEvent(
-            KeyEvent(
-                downTime,
-                SystemClock.uptimeMillis(),
-                KeyEvent.ACTION_UP,
-                KeyEvent.KEYCODE_F,
-                0
+            webView.dispatchKeyEvent(
+                KeyEvent(
+                    downTime,
+                    SystemClock.uptimeMillis(),
+                    KeyEvent.ACTION_UP,
+                    KeyEvent.KEYCODE_F,
+                    0
+                )
             )
-        )
-
-        onVideoResolutionChanged(-100,-100)
+            onVideoResolutionChanged(-100, -100)
+        }
     }
 
 }

@@ -324,7 +324,7 @@ class SettingsViewModel : ViewModel() {
             Configs.videoPlayerDisplayMode = value
         }
 
-    private var _videoPlayerForceAudioSoftDecode by mutableStateOf(false)
+    private var _videoPlayerForceAudioSoftDecode by mutableStateOf(Configs.videoPlayerForceAudioSoftDecode)
     var videoPlayerForceAudioSoftDecode: Boolean
         get() = _videoPlayerForceAudioSoftDecode
         set(value) {
@@ -332,7 +332,7 @@ class SettingsViewModel : ViewModel() {
             Configs.videoPlayerForceAudioSoftDecode = value
         }
 
-    private var _videoPlayerRenderMode by mutableStateOf(Configs.VideoPlayerRenderMode.SURFACE_VIEW)
+    private var _videoPlayerRenderMode by mutableStateOf(Configs.videoPlayerRenderMode)
     var videoPlayerRenderMode: Configs.VideoPlayerRenderMode
         get() = _videoPlayerRenderMode
         set(value) {
@@ -340,7 +340,7 @@ class SettingsViewModel : ViewModel() {
             Configs.videoPlayerRenderMode = value
         }
 
-    private var _videoPlayerStopPreviousMediaItem by mutableStateOf(false)
+    private var _videoPlayerStopPreviousMediaItem by mutableStateOf(Configs.videoPlayerStopPreviousMediaItem)
     var videoPlayerStopPreviousMediaItem: Boolean
         get() = _videoPlayerStopPreviousMediaItem
         set(value) {
@@ -348,7 +348,7 @@ class SettingsViewModel : ViewModel() {
             Configs.videoPlayerStopPreviousMediaItem = value
         }
 
-    private var _videoPlayerSkipMultipleFramesOnSameVSync by mutableStateOf(false)
+    private var _videoPlayerSkipMultipleFramesOnSameVSync by mutableStateOf(Configs.videoPlayerSkipMultipleFramesOnSameVSync)
     var videoPlayerSkipMultipleFramesOnSameVSync: Boolean
         get() = _videoPlayerSkipMultipleFramesOnSameVSync
         set(value) {
@@ -362,7 +362,7 @@ class SettingsViewModel : ViewModel() {
             _proxyType = value
             Configs.proxyType = value
         }
-    private var _sysWebViewMode by mutableStateOf(false)
+    private var _sysWebViewMode by mutableStateOf(Configs.sysWebViewMode)
     var sysWebViewMode: Boolean
         get() = _sysWebViewMode
         set(value) {
@@ -426,7 +426,9 @@ class SettingsViewModel : ViewModel() {
         _videoPlayerAspectRatio = Configs.videoPlayerDisplayMode
         _videoPlayerForceAudioSoftDecode = Configs.videoPlayerForceAudioSoftDecode
         _videoPlayerRenderMode = Configs.videoPlayerRenderMode
+        _videoPlayerStopPreviousMediaItem = Configs.videoPlayerStopPreviousMediaItem
         _videoPlayerSkipMultipleFramesOnSameVSync = Configs.videoPlayerSkipMultipleFramesOnSameVSync
-        _sysWebViewMode=Configs.sysWebViewMode
+        _proxyType = Configs.proxyType
+        _sysWebViewMode = Configs.sysWebViewMode
     }
 }

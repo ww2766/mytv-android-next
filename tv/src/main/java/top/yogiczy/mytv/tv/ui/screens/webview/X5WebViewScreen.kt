@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.annotation.TargetApi
 import android.graphics.Bitmap
 import android.net.Uri
+import android.view.KeyEvent
 import android.os.Build
 import android.view.View
 import android.view.ViewGroup
@@ -89,7 +90,8 @@ fun X5WebViewScreen(
 
                     layoutParams = params
                     setOnKeyListener { _, keyCode, event ->
-                        true // 全局按键拦截
+                        if (keyCode == KeyEvent.KEYCODE_F) false // 放行 F 键，供 JS 层触发全屏
+                        else true // 拦截其他按键，避免焦点冲突
                     }
                     setOnClickListener { true }
                     setOnDragListener { v, event -> true }
@@ -104,11 +106,11 @@ fun X5WebViewScreen(
                         }
 
                         override fun onPageFinished(view: WebView?, url: String?) {
-                            /*view?.evaluateJavascript(
+                            view?.evaluateJavascript(
                                 jsString.trimIndent()
                             ) {
                                 //onPageFinished()
-                            }*/
+                            }
                             super.onPageFinished(view, url)
                         }
 
@@ -188,6 +190,12 @@ fun X5WebViewScreen(
                                 customView = null
                                 customViewCallback = null
                             }
+                        }
+
+                        override fun onHideCustomView() {
+                            customViewCallback?.onCustomViewHidden()
+                            customView = null
+                            customViewCallback = null
                         }
 
                         override fun onJsAlert(

@@ -157,8 +157,10 @@ private fun WebViewComponent(
                             """
                                                     
                                                                         console.log('Plugin enter.');
+                                                                        if (window.__myPluginInitialized) return;
+                                                                        window.__myPluginInitialized = true;
                                                                         ;(async () => {
-                                                                            console.log('Plugin enter.');
+                                                                            console.log('Plugin enter async.');
                                                                             // 标记是否有用户交互
                                                                             let userInteracted = false;
                                                                 
@@ -626,28 +628,28 @@ private val webView: WebView,
 
     @JavascriptInterface
     public fun clickKeyCodeF() {
-//webView.requestFocus()
-        val downTime = SystemClock.uptimeMillis()
-        webView.dispatchKeyEvent(
-            KeyEvent(
-                downTime,
-                downTime,
-                KeyEvent.ACTION_DOWN,
-                KeyEvent.KEYCODE_F,
-                0
+        webView.post {
+            webView.requestFocus()
+            val downTime = SystemClock.uptimeMillis()
+            webView.dispatchKeyEvent(
+                KeyEvent(
+                    downTime,
+                    downTime,
+                    KeyEvent.ACTION_DOWN,
+                    KeyEvent.KEYCODE_F,
+                    0
+                )
             )
-        )
-        sleep(50)
-        webView.dispatchKeyEvent(
-            KeyEvent(
-                downTime,
-                SystemClock.uptimeMillis(),
-                KeyEvent.ACTION_UP,
-                KeyEvent.KEYCODE_F,
-                0
+            webView.dispatchKeyEvent(
+                KeyEvent(
+                    downTime,
+                    SystemClock.uptimeMillis(),
+                    KeyEvent.ACTION_UP,
+                    KeyEvent.KEYCODE_F,
+                    0
+                )
             )
-        )
-
+        }
     }
 
 }
