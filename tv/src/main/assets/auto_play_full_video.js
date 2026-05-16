@@ -99,19 +99,27 @@
             "  position: fixed !important;" +
             "  top: 0 !important;" +
             "  left: 0 !important;" +
+            "  right: 0 !important;" +
+            "  bottom: 0 !important;" +
             "  width: 100vw !important;" +
             "  height: 100vh !important;" +
+            "  min-width: 0 !important;" +
+            "  min-height: 0 !important;" +
+            "  max-width: none !important;" +
+            "  max-height: none !important;" +
             "  margin: 0 !important;" +
             "  padding: 0 !important;" +
-            "  z-index: 2147483646 !important;" +
+            "  z-index: 2147483640 !important;" +
             "  background-color: black !important;" +
             "  display: block !important;" +
+            "  box-sizing: border-box !important;" +
             "  transform: none !important;" +
             "  filter: none !important;" +
             "  contain: none !important;" +
             "  backdrop-filter: none !important;" +
             "  perspective: none !important;" +
             "  clip-path: none !important;" +
+            "  zoom: 1 !important;" +
             "  will-change: auto !important;" +
             "}" +
             ".no-scroll-webview { overflow: hidden !important; }";
@@ -152,7 +160,7 @@
                     // 即使找不到具体哪一个，也尝试把页面上所有活跃的 iframe 处理一下
                     var allIframes = document.querySelectorAll('iframe');
                     for (var j = 0; j < allIframes.length; j++) {
-                        setStyle(allIframes[j], "position: fixed !important; top: 0 !important; left: 0 !important; width: 100% !important; height: 100% !important; z-index: 2147483646 !important;");
+                        setStyle(allIframes[j], "position: fixed !important; top: 0 !important; left: 0 !important; right: 0 !important; bottom: 0 !important; width: 100vw !important; height: 100vh !important; z-index: 2147483640 !important; background: black !important; min-width: 0 !important; min-height: 0 !important; max-width: none !important; max-height: none !important; box-sizing: border-box !important;");
                     }
                 }
                 if (document.body && document.body.classList) {
@@ -240,6 +248,25 @@
         }
 
         console.info('enterInlineFullScreen(): 正在应用 CSS 强制全屏样式, 视频源: ' + video.src);
+        
+        // 强行修改 viewport 以适配屏幕宽度，解决 width=1400 等硬编码视口导致的裁切问题
+        try {
+            var meta = document.querySelector('meta[name="viewport"]');
+            var content = "width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no";
+            if (meta) {
+                meta.setAttribute('content', content);
+            } else {
+                meta = document.createElement('meta');
+                meta.name = "viewport";
+                meta.content = content;
+                document.head.appendChild(meta);
+            }
+            console.log('enterInlineFullScreen(): Viewport 已重置为 device-width');
+            window.dispatchEvent(new Event('resize'));
+        } catch (e) {
+            console.warn('enterInlineFullScreen(): 重置 Viewport 失败', e);
+        }
+
         var currentNode = video;
         var depth = 0;
         
@@ -272,12 +299,19 @@
                         currentNode.className += ' fullscreen-webview';
                     }
                     
-                    var css = "z-index: " + (++zIdx) + " !important; " +
+                    var currentZ = (currentNode.tagName === 'VIDEO') ? 1 : (++zIdx);
+                    var css = "z-index: " + currentZ + " !important; " +
                               "position: fixed !important; " +
                               "top: 0 !important; " +
                               "left: 0 !important; " +
-                              "width: 100% !important; " +
-                              "height: 100% !important; " +
+                              "right: 0 !important; " +
+                              "bottom: 0 !important; " +
+                              "width: 100vw !important; " +
+                              "height: 100vh !important; " +
+                              "min-width: 0 !important; " +
+                              "min-height: 0 !important; " +
+                              "max-width: none !important; " +
+                              "max-height: none !important; " +
                               "margin: 0 !important; " +
                               "padding: 0 !important; " +
                               "background-color: black !important; " +
@@ -289,10 +323,11 @@
                               "backdrop-filter: none !important; " +
                               "perspective: none !important; " +
                               "clip-path: none !important; " +
+                              "zoom: 1 !important; " +
                               "will-change: auto !important;";
                               
                     if (currentNode.tagName === 'VIDEO') {
-                        css += " object-fit: contain !important;";
+                        css += " object-fit: contain !important; object-position: center !important;";
                     }
                     
                     setStyle(currentNode, css);
