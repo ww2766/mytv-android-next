@@ -6,8 +6,10 @@ import android.graphics.Bitmap
 import android.net.Uri
 import android.view.KeyEvent
 import android.os.Build
+import android.os.SystemClock
 import android.view.View
 import android.view.ViewGroup
+import android.webkit.JavascriptInterface
 import android.widget.FrameLayout
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
@@ -52,7 +54,13 @@ fun X5WebViewScreen(
 ) {
     val context = LocalContext.current
     val log= Logger.create("X5WebViewComponent")
-    val jsString=AssetUtil.readStringFromAssets(context,"auto_play_full_video.js")
+    val jsString = remember {
+        try {
+            AssetUtil.readStringFromAssets(context, "auto_play_full_video.js")
+        } catch (e: Exception) {
+            "console.error('Failed to load auto_play_full_video.js');"
+        }
+    }
     var webViewRef by remember { mutableStateOf<WebView?>(null) }
     var customView by remember { mutableStateOf<View?>(null) }
     var customViewCallback by remember { mutableStateOf<IX5WebChromeClient.CustomViewCallback?>(null) }
@@ -84,7 +92,9 @@ fun X5WebViewScreen(
                     settings.setSupportZoom(false)
                     settings.displayZoomControls = false
                     settings.builtInZoomControls = false
-                    //settings.mixedContentMode = android.webkit.WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                        settings.mixedContentMode = android.webkit.WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+                    }
                     settings.mediaPlaybackRequiresUserGesture = false
                     settingsExtension?.setPicModel(IX5WebSettingsExtension.PicModel_NoPic)
 
@@ -102,15 +112,11 @@ fun X5WebViewScreen(
                     webViewClient = object : WebViewClient() {
                         override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
                             super.onPageStarted(view, url, favicon)
-                            view?.evaluateJavascript(jsString.trimIndent(), null)
+                            view?.evaluateJavascript("window.__myPluginInitialized = false;", null)
                         }
 
                         override fun onPageFinished(view: WebView?, url: String?) {
-                            view?.evaluateJavascript(
-                                jsString.trimIndent()
-                            ) {
-                                //onPageFinished()
-                            }
+                            view?.evaluateJavascript(jsString.trimIndent(), null)
                             super.onPageFinished(view, url)
                         }
 
@@ -209,10 +215,10 @@ fun X5WebViewScreen(
                         }
                         override fun onConsoleMessage(msg: ConsoleMessage): Boolean {
                             when (msg.messageLevel()) {
-                                ConsoleMessage.MessageLevel.DEBUG, null -> log.i(msg.message())
-                                ConsoleMessage.MessageLevel.LOG, ConsoleMessage.MessageLevel.TIP -> log.i( msg.message())
-                                ConsoleMessage.MessageLevel.WARNING -> log.i(msg.message())
-                                ConsoleMessage.MessageLevel.ERROR -> log.i( msg.message())
+                                ConsoleMessage.MessageLevel.DEBUG, null -> log.d(msg.message())
+                                ConsoleMessage.MessageLevel.LOG, ConsoleMessage.MessageLevel.TIP -> log.i(msg.message())
+                                ConsoleMessage.MessageLevel.WARNING -> log.w(msg.message())
+                                ConsoleMessage.MessageLevel.ERROR -> log.e(msg.message())
                             }
                             return true
                         }
@@ -292,6 +298,45 @@ fun X5WebViewScreen(
             onDispose {
                 webViewRef?.destroy()
             }
+        }
+    }
+}
+
+class X5MyWebViewInterface(
+    private val onVideoResolutionChanged: (width: Int, height: Int) -> Unit = { _, _ -> },
+    private val webView: WebView,
+) {
+    @JavascriptInterface
+    fun changeVideoResolution(width: Int, height: Int) {
+        Logger.create("X5WebViewComponent").i("changeVideoResolution: ${width}x${height}")
+        onVideoResolutionChanged(width, height)
+    }
+
+    @JavascriptInterface
+    fun clickKeyCodeF() {
+        Logger.create("X5WebViewComponent").i("clickKeyCodeF()")
+        webView.post {
+            webView.requestFocus()
+            val downTime = SystemClock.uptimeMillis()
+            webView.dispatchKeyEvent(
+                KeyEvent(
+                    downTime,
+                    downTime,
+                    KeyEvent.ACTION_DOWN,
+                    KeyEvent.KEYCODE_F,
+                    0
+                )
+            )
+            webView.dispatchKeyEvent(
+                KeyEvent(
+                    downTime,
+                    SystemClock.uptimeMillis(),
+                    KeyEvent.ACTION_UP,
+                    KeyEvent.KEYCODE_F,
+                    0
+                )
+            )
+            onVideoResolutionChanged(-100, -100)
         }
     }
 }

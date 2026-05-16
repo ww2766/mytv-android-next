@@ -138,7 +138,6 @@ fun MainContent(
         Visible({ Configs.sysWebViewMode && ChannelUtil.isHybridWebViewUrl(mainContentState.currentChannel.urlList[mainContentState.currentChannelUrlIdx]) }) {
 
             QbSdk.forceSysWebView()
-            //WebViewScreen( WebViewComponentTest WebViewWithFullscreenVideo
             WebViewComponent(
                 urlProvider = { mainContentState.currentChannel.urlList[mainContentState.currentChannelUrlIdx] },
                 onVideoResolutionChanged = { width, height ->
@@ -166,7 +165,6 @@ fun MainContent(
             //QbSdk.
             //mainContentState.isTempChannelScreenVisible = false
             X5WebViewScreen(
-                //X5WebViewComponent(
                 urlProvider = { mainContentState.currentChannel.urlList[mainContentState.currentChannelUrlIdx] },
                 onVideoResolutionChanged = { width, height ->
                     if(width==-100){

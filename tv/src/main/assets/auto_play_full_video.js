@@ -61,6 +61,12 @@
                 if (errName === 'AbortError' && errMsg.indexOf('load') !== -1) {
                     console.warn('safePlay: source reloading, will wait for canplay event');
                     isVideoLoading = true; // 标记换源中，loopFunction 不再主动 play
+                    // 注册一次性 canplay 监听器，新源就绪后重置标志
+                    video.addEventListener('canplay', function onCanPlay() {
+                        video.removeEventListener('canplay', onCanPlay);
+                        console.log('safePlay: canplay fired, isVideoLoading reset');
+                        isVideoLoading = false;
+                    });
                     return;
                 }
                 // "interrupted by a call to pause()" 说明网站调了 pause，退避 1.5s 再试
@@ -107,29 +113,50 @@
         document.addEventListener('keydown', handleKeyDown, true);
 
         window.addEventListener('message', function(e) {
-            var iframe = e.source && e.source.frameElement;
-            if (iframe) {
-                if (e.data && e.data.action === 'iframeEnterFullscreen') {
+            if (!e.data || !e.data.action) return;
+
+            var findIframeByWindow = function(win) {
+                var iframes = document.querySelectorAll('iframe');
+                for (var i = 0; i < iframes.length; i++) {
+                    try {
+                        if (iframes[i].contentWindow === win) return iframes[i];
+                    } catch (err) {}
+                }
+                return null;
+            };
+
+            var iframe = findIframeByWindow(e.source);
+            
+            if (e.data.action === 'iframeEnterFullscreen') {
+                console.log('Message: 收到 Iframe 全屏请求');
+                if (iframe) {
+                    console.log('Message: 锁定请求来源 Iframe: ' + (iframe.id || iframe.className));
                     if (iframe.classList) {
                         iframe.classList.add('fullscreen-webview');
                     } else {
                         iframe.className += ' fullscreen-webview';
                     }
-                    if (document.body.classList) {
-                        document.body.classList.add('no-scroll-webview');
-                    } else {
-                        document.body.className += ' no-scroll-webview';
-                    }
+                    // 继续向上传递
                     if (window.parent && window.parent !== window) {
                         window.parent.postMessage({ action: 'iframeEnterFullscreen' }, '*');
                     }
-                } else if (e.data && e.data.action === 'iframeExitFullscreen') {
-                    if (iframe.classList) {
-                        iframe.classList.remove('fullscreen-webview');
+                } else {
+                    console.warn('Message: 无法在当前层级锁定请求来源 Iframe (可能由于深度嵌套或跨域)');
+                    // 即使找不到具体哪一个，也尝试把页面上所有活跃的 iframe 处理一下
+                    var allIframes = document.querySelectorAll('iframe');
+                    for (var j = 0; j < allIframes.length; j++) {
+                        setStyle(allIframes[j], "position: fixed !important; top: 0 !important; left: 0 !important; width: 100% !important; height: 100% !important; z-index: 2147483646 !important;");
                     }
-                    if (document.body.classList) {
-                        document.body.classList.remove('no-scroll-webview');
-                    }
+                }
+                if (document.body && document.body.classList) {
+                    document.body.classList.add('no-scroll-webview');
+                }
+            } else if (e.data.action === 'iframeExitFullscreen') {
+                if (iframe && iframe.classList) {
+                    iframe.classList.remove('fullscreen-webview');
+                }
+                if (document.body && document.body.classList) {
+                    document.body.classList.remove('no-scroll-webview');
                 }
             }
         });
@@ -146,21 +173,31 @@
 
     function searchVideo() {
         try {
-            if (window.top && window.top.foundVideo) return;
+            if (window.top && window.top.foundVideo) {
+                if (window.__searchInterval) clearInterval(window.__searchInterval);
+                return;
+            }
         } catch (e) {}
         var video = document.querySelector('video');
         if (video) {
+            console.log('searchVideo(): 发现 video 元素');
             enterInlineFullScreen(video);
+            if (window.__searchInterval) clearInterval(window.__searchInterval);
+            return;
         }
-        setTimeout(searchVideo, 500);
+        if (!window.__searchInterval) {
+            window.__searchInterval = setInterval(searchVideo, 500);
+        }
     }
 
     function setVideoResolution(video) {
         try {
             if (window.AndroidBridge && window.AndroidBridge.changeVideoResolution) {
                 if (video && video.videoWidth && video.videoHeight) {
+                    console.info('setVideoResolution(): ' + video.videoWidth + 'x' + video.videoHeight);
                     window.AndroidBridge.changeVideoResolution(video.videoWidth, video.videoHeight);
                 } else {
+                    console.info('setVideoResolution(): 默认 1280x720');
                     window.AndroidBridge.changeVideoResolution(1280, 720);
                 }
             }
@@ -173,167 +210,170 @@
         return !!(video.currentTime > 0 && !video.paused && !video.ended && video.readyState > 2);
     }
 
+    function autoPlay(video) {
+        if (video.paused) {
+            console.info('autoPlay(): 尝试播放 video');
+            safePlay(video);
+        } else {
+            console.log('autoPlay(): video 已经在播放中');
+        }
+    }
+
     function enterInlineFullScreen(video) {
+        console.warn('enterInlineFullScreen(): 开始处理全屏');
         try {
             if (window.top) {
                 window.top.foundVideo = video;
             }
         } catch (e) {}
-        if (video.paused) {
-            // 换源期间不强行 play，等 canplay 事件后自然恢复
-            if (!isVideoLoading) {
-                safePlay(video, function() { enterInlineFullScreen(video); });
-            }
-            return;
-        }
+
         if (isInlineFullScreen) {
+            console.log('enterInlineFullScreen(): 已经是全屏状态，跳过');
             return;
         }
 
+        console.info('enterInlineFullScreen(): 正在应用 CSS 强制全屏样式, 视频源: ' + video.src);
         var currentNode = video;
-        while (currentNode && currentNode !== document && currentNode !== window) {
+        var depth = 0;
+        
+        while (currentNode && currentNode !== window) {
+            if (currentNode === document) {
+                break; // 到达主页面根节点，遍历完成
+            }
+
             try {
-                if (currentNode === video) {
+                if (currentNode.nodeType === 1) { // ELEMENT_NODE
+                    var tag = currentNode.tagName || 'UNKNOWN';
+                    var id = currentNode.id ? '#' + currentNode.id : '';
+                    var cls = currentNode.className && typeof currentNode.className === 'string' ? '.' + currentNode.className.split(' ').join('.') : '';
+                    
+                    // 检测可能破坏 fixed 定位的属性
+                    var win = (currentNode.ownerDocument && currentNode.ownerDocument.defaultView) || window;
+                    var style = win.getComputedStyle ? win.getComputedStyle(currentNode) : null;
+                    if (style) {
+                        var transform = style.getPropertyValue('transform');
+                        var filter = style.getPropertyValue('filter');
+                        var contain = style.getPropertyValue('contain');
+                        if ((transform && transform !== 'none') || (filter && filter !== 'none') || (contain && contain !== 'none')) {
+                            console.warn('enterInlineFullScreen(): 警告! 节点 ' + tag + id + cls + ' 含有破坏 fixed 布局的属性: transform=' + transform + ', filter=' + filter + ', contain=' + contain);
+                        }
+                    }
+
                     if (currentNode.classList) {
                         currentNode.classList.add('fullscreen-webview');
                     } else if (currentNode.className && typeof currentNode.className === 'string' && currentNode.className.indexOf('fullscreen-webview') === -1) {
                         currentNode.className += ' fullscreen-webview';
                     }
                     
-                    var css = "z-index: 2147483647 !important; " +
+                    var css = "z-index: " + (++zIdx) + " !important; " +
                               "position: fixed !important; " +
                               "top: 0 !important; " +
                               "left: 0 !important; " +
-                              "width: 100vw !important; " +
-                              "height: 100vh !important; " +
+                              "width: 100% !important; " +
+                              "height: 100% !important; " +
                               "margin: 0 !important; " +
                               "padding: 0 !important; " +
                               "background-color: black !important; " +
                               "display: block !important; " +
-                              "box-sizing: border-box !important; " +
-                              "object-fit: contain !important;";
+                              "box-sizing: border-box !important;";
+                              
+                    if (currentNode.tagName === 'VIDEO') {
+                        css += " object-fit: contain !important;";
+                    }
+                    
                     setStyle(currentNode, css);
-                } else {
-                    // 对于父元素，绝对不能加 position: fixed 或改变其宽高，
-                    // 否则会导致网站自带的播放器（尤其是 CCTV 这类 WASM 播放器）检测到外层容器尺寸坍塌，
-                    // 从而触发其内部的“不可见即暂停”逻辑，导致跟我们的 loopFunction 疯狂互抢播放权（引发 AbortError）。
-                    // 我们只需要保证父元素不裁剪（overflow: visible），并提升其层级（z-index）即可。
-                    // 额外清理 transform 确保 getBoundingClientRect 测量正确。
-                    setStyle(currentNode, "overflow: visible !important; z-index: 2147483640 !important; transform: none !important; transition: none !important;");
+                    console.log('enterInlineFullScreen(): 已处理层级 ' + depth + ': ' + tag + id + cls);
                 }
             } catch (error) {
                 console.error("Error setting styles on node", currentNode, error);
             }
 
-            if (currentNode.parentNode === null && currentNode.host) {
-                currentNode = currentNode.host;
-            } else {
-                currentNode = currentNode.parentNode;
+            depth++;
+            var nextNode = currentNode.parentNode;
+            
+            // 跳出 Iframe 的边界判断
+            if (!nextNode) {
+                if (currentNode.host) {
+                    nextNode = currentNode.host; // Shadow DOM 支持
+                } else if (currentNode.defaultView && currentNode.defaultView.frameElement) {
+                    nextNode = currentNode.defaultView.frameElement; // 同源 iframe 边界跳跃！
+                    console.warn('enterInlineFullScreen(): 成功跨越 Iframe 边界，继续在父页面中向上处理');
+                }
             }
+            currentNode = nextNode;
         }
 
         isInlineFullScreen = true;
         
         if (window.parent && window.parent !== window) {
+            console.log('enterInlineFullScreen(): 通知跨域父框架进入全屏（兜底方案）');
             window.parent.postMessage({ action: 'iframeEnterFullscreen' }, '*');
         }
         
         setVideoResolution(video);
         loopFunction(video);
-        console.warn('enterInlineFullScreen() end');
+        console.warn('enterInlineFullScreen(): 全屏处理完成, 总层数: ' + depth);
     }
 
     function loopFunction(video) {
-        // 订阅换源事件：loadstart / emptied 说明播放器正在切换流地址
-        if (!video.__loopBound) {
-            video.__loopBound = true;
-
-            video.addEventListener('loadstart', function() {
-                console.log('loopFunction: video loadstart → 进入换源等待');
-                isVideoLoading = true;
-                isPlayPending   = false; // 释放锁，旧的 promise 已作废
-            });
-
-            video.addEventListener('emptied', function() {
-                isVideoLoading = true;
-                isPlayPending   = false;
-            });
-
-            // canplay / playing 说明新源就绪或已开始播放
-            video.addEventListener('canplay', function() {
-                console.log('loopFunction: canplay → 换源完成，检查是否需要 play');
-                isVideoLoading = false;
-                // 如果此时仍是暂停状态，才主动干预（部分网站加载完不自动 play）
-                if (video.paused) {
-                    safePlay(video, function() {
-                        // 播放成功后确保全屏流程也跟上
-                        if (!isInlineFullScreen) {
-                            enterInlineFullScreen(video);
-                        }
-                    });
-                }
-            });
-
-            video.addEventListener('playing', function() {
-                isVideoLoading = false;
-                isPlayPending   = false;
-            });
-
-            video.addEventListener('pause', function() {
-                if (!isVideoLoading && isInlineFullScreen) {
-                    console.log('loopFunction: detected unintended pause, force resume');
-                    setTimeout(function() { safePlay(video, null); }, 100);
-                }
-            });
-
-            // 模拟用户活跃，防止播放器超时进入休眠
-            (function activeGuard() {
-                if (isInlineFullScreen && !video.paused) {
-                    try {
-                        // 极致兼容性：使用老旧内核支持的 createEvent 模式
-                        var evt = document.createEvent('MouseEvents');
-                        evt.initMouseEvent('mousemove', true, true, window, 0, 0, 0, 0, 0, false, false, false, false, 0, null);
-                        document.dispatchEvent(evt);
-                        console.log('loopFunction: simulated mousemove (legacy mode)');
-                    } catch(e) {
-                        console.error('activeGuard error', e);
-                    }
-                }
-                setTimeout(activeGuard, 10000);
-            })();
-
-            // 音量保活仍需定时检查
-            (function volumeGuard() {
-                if (video.muted)      video.muted = false;
-                if (video.volume < 1) video.volume = 1;
-
-                // 只有在没换源、没锁、且真的卡住了（paused 但 readyState 正常）才主动 play
-                if (!isVideoLoading && !isPlayPending && video.paused && video.readyState >= 3) {
-                    console.log('loopFunction: video stuck paused, try safePlay');
-                    safePlay(video, function() {
-                        if (!isInlineFullScreen) {
-                            enterInlineFullScreen(video);
-                        }
-                    });
-                }
-
-                setTimeout(volumeGuard, 5000);
-            })();
+        if (!video) return;
+        var loopCount = video.__loopCount || 0;
+        video.__loopCount = loopCount + 1;
+        
+        var playing = isPlaying(video);
+        if (playing && !video.muted && video.volume === 1) {
+            video.__loopCount = 0; // 正常播放时重置计数器
+            setTimeout(function() { loopFunction(video); }, 5000);
+            return;
         }
+        
+        console.log('loopFunction(): 检测到播放状态异常: ' +
+                    'playing=' + playing + ' (currentTime=' + video.currentTime + ', readyState=' + video.readyState + '), ' +
+                    'paused=' + video.paused + ', ' +
+                    'muted=' + video.muted + ', ' +
+                    'vol=' + video.volume);
+        
+        // 启动宽限期：给播放器缓冲的时间，防止打断加载
+        if (video.readyState < 3 && video.__loopCount < 10) {
+            console.log('loopFunction(): video 正在加载中 (readyState=' + video.readyState + ')，等待缓冲');
+            setTimeout(function() { loopFunction(video); }, 2000);
+            return;
+        }
+
+        if (video.muted) {
+            video.muted = false;
+            console.info('loopFunction(): 取消静音');
+        }
+        if (video.volume < 1) {
+            video.volume = 1;
+            console.info('loopFunction(): 恢复最大音量');
+        }
+        
+        if (video.paused) {
+            console.info('loopFunction(): 尝试恢复播放');
+            safePlay(video);
+        }
+        
+        setTimeout(function() { loopFunction(video); }, 2000);
     }
 
     function handleAddedNode(node) {
         if (node.nodeType !== 1) return; // Node.ELEMENT_NODE
 
         if (node.tagName === 'VIDEO') {
+            console.log('MutationObserver: 发现新 video 元素');
             if (node.getAttribute('data-video-handled') !== 'true') {
-                node.addEventListener('play', function() { enterInlineFullScreen(node); });
+                node.addEventListener('play', function() { 
+                    console.log('Event: video 开始播放');
+                    enterInlineFullScreen(node); 
+                });
                 node.setAttribute('data-video-handled', 'true');
                 if (!node.paused) {
                     enterInlineFullScreen(node);
                 }
             }
         } else if (node.tagName === 'IFRAME') {
+            console.log('MutationObserver: 发现新 iframe 元素');
             try {
                 var doc = node.contentDocument || (node.contentWindow && node.contentWindow.document);
                 if (doc) detectAndListenVideo.call(doc, 0);
@@ -351,6 +391,7 @@
     }
 
     function handleShadowRoot(shadowRoot) {
+        console.log('handleShadowRoot(): 正在处理 Shadow DOM');
         if (typeof MutationObserver !== 'undefined') {
             var observer = new MutationObserver(function(mutations) {
                 for (var i = 0; i < mutations.length; i++) {
@@ -374,13 +415,18 @@
         if (depth >= 5) return;
 
         var context = this === window ? document : this;
+        console.log('detectAndListenVideo(): 正在扫描层级 ' + depth);
 
         var videos = context.querySelectorAll('video');
         for (var i = 0; i < videos.length; i++) {
             var video = videos[i];
             if (video.getAttribute('data-video-handled') !== 'true') {
+                console.log('detectAndListenVideo(): 发现未处理 video');
                 video.addEventListener('play', (function(v) {
-                    return function() { enterInlineFullScreen(v); };
+                    return function() { 
+                        console.log('Event: video 开始播放 (from scanner)');
+                        enterInlineFullScreen(v); 
+                    };
                 })(video));
                 video.setAttribute('data-video-handled', 'true');
                 if (!video.paused) {
@@ -390,7 +436,7 @@
         }
 
         var iframes = context.querySelectorAll('iframe');
-        if (iframes.length <= 5) {
+        if (iframes.length <= 10) {
             for (var i = 0; i < iframes.length; i++) {
                 var iframe = iframes[i];
                 var handleIframeLoad = (function(ifr) {
@@ -398,9 +444,12 @@
                         try {
                             var iframeDoc = ifr.contentDocument || (ifr.contentWindow && ifr.contentWindow.document);
                             if (iframeDoc) {
+                                console.log('Iframe loaded: 递归扫描内容');
                                 detectAndListenVideo.call(iframeDoc, depth + 1);
                             }
-                        } catch (err) {}
+                        } catch (err) {
+                            console.warn('Iframe load error: 跨域访问受限');
+                        }
                     };
                 })(iframe);
 
@@ -410,7 +459,9 @@
                     } else {
                         iframe.addEventListener('load', handleIframeLoad);
                     }
-                } catch(e) {}
+                } catch(e) {
+                    console.warn('Iframe error: 跨域访问受限');
+                }
             }
         }
 
@@ -423,7 +474,7 @@
     }
 
     function onPageLoad() {
-        console.log('Page loaded, initializing plugin...');
+        console.info('onPageLoad(): 页面加载完成，初始化插件...');
         initPlugin();
 
         if (typeof MutationObserver !== 'undefined') {
@@ -436,12 +487,14 @@
                 }
             });
             observer.observe(document.body || document.documentElement, { childList: true, subtree: true });
+            console.log('onPageLoad(): MutationObserver 已启动');
         }
 
         detectAndListenVideo.call(document, 0);
         
         if (window.AndroidBridge && window.AndroidBridge.clickKeyCodeF) {
             try {
+                console.info('onPageLoad(): 触发 AndroidBridge.clickKeyCodeF() 以获取用户交互授权');
                 window.AndroidBridge.clickKeyCodeF();
             } catch(e) {}
         }

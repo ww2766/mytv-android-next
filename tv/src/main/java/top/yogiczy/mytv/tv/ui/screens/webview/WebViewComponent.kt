@@ -52,7 +52,13 @@ fun WebViewComponent(
 ) {
     val context = LocalContext.current
     val log= Logger.create("WebViewComponent")
-    val jsString=AssetUtil.readStringFromAssets(context,"auto_play_full_video.js")
+    val jsString = remember {
+        try {
+            AssetUtil.readStringFromAssets(context, "auto_play_full_video.js")
+        } catch (e: Exception) {
+            "console.error('Failed to load auto_play_full_video.js');"
+        }
+    }
     var webViewRef by remember { mutableStateOf<WebView?>(null) }
     var customView by remember { mutableStateOf<View?>(null) }
     var customViewCallback by remember { mutableStateOf<WebChromeClient.CustomViewCallback?>(null) }
@@ -80,12 +86,12 @@ fun WebViewComponent(
                     settings.loadWithOverviewMode = true
                     settings.domStorageEnabled = true
                     settings.databaseEnabled = true
-                    settings.cacheMode = WebSettings.LOAD_CACHE_ELSE_NETWORK
+                    settings.cacheMode = WebSettings.LOAD_DEFAULT
                     settings.loadsImagesAutomatically = false
                     settings.blockNetworkImage = true
                     settings.userAgentString =
                         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36 Edg/126.0.0.0"
-                    settings.cacheMode = WebSettings.LOAD_DEFAULT
+
                     settings.javaScriptCanOpenWindowsAutomatically = true
                     settings.setSupportZoom(false)
                     settings.displayZoomControls = false
@@ -97,7 +103,8 @@ fun WebViewComponent(
                     settings.setAllowFileAccessFromFileURLs(true); // 允许通过文件 URL 加载资源
                     layoutParams = params
                     setOnKeyListener { _, keyCode, event ->
-                        true // 全局按键拦截
+                        if (keyCode == KeyEvent.KEYCODE_F) false // 放行 F 键，供 JS 层触发全屏
+                        else true // 拦截其他按键，避免焦点冲突
                     }
                     setOnClickListener { true }
                     setOnDragListener { v, event -> true }
@@ -107,13 +114,12 @@ fun WebViewComponent(
                     }
                     webViewClient = object : WebViewClient() {
                         override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
+                            super.onPageStarted(view, url, favicon)
+                            view?.evaluateJavascript("window.__myPluginInitialized = false;", null)
                         }
 
                         override fun onPageFinished(view: WebView?, url: String?) {
-                            view?.evaluateJavascript(jsString.trimIndent()
-                            ) {
-                                //onPageFinished()
-                            }
+                            view?.evaluateJavascript(jsString.trimIndent(), null)
                             super.onPageFinished(view, url)
                         }
 
@@ -218,12 +224,18 @@ fun WebViewComponent(
                             }
                         }
 
+                        override fun onHideCustomView() {
+                            customViewCallback?.onCustomViewHidden()
+                            customView = null
+                            customViewCallback = null
+                        }
+
                         override fun onConsoleMessage(msg: ConsoleMessage): Boolean {
                             when (msg.messageLevel()) {
-                                ConsoleMessage.MessageLevel.DEBUG, null -> log.i(msg.message())
-                                ConsoleMessage.MessageLevel.LOG, ConsoleMessage.MessageLevel.TIP -> log.i( msg.message())
-                                ConsoleMessage.MessageLevel.WARNING -> log.i(msg.message())
-                                ConsoleMessage.MessageLevel.ERROR -> log.i( msg.message())
+                                ConsoleMessage.MessageLevel.DEBUG, null -> log.d(msg.message())
+                                ConsoleMessage.MessageLevel.LOG, ConsoleMessage.MessageLevel.TIP -> log.i(msg.message())
+                                ConsoleMessage.MessageLevel.WARNING -> log.w(msg.message())
+                                ConsoleMessage.MessageLevel.ERROR -> log.e(msg.message())
                             }
                             return true
                         }
@@ -322,11 +334,13 @@ private val webView: WebView,
 ) {
     @JavascriptInterface
     fun changeVideoResolution(width: Int, height: Int) {
+        Logger.create("WebViewComponent").i("changeVideoResolution: ${width}x${height}")
         onVideoResolutionChanged(width, height)
     }
 
     @JavascriptInterface
     fun clickKeyCodeF() {
+        Logger.create("WebViewComponent").i("clickKeyCodeF()")
         //webView.requestFocus()
         val downTime = SystemClock.uptimeMillis()
         webView.dispatchKeyEvent(
