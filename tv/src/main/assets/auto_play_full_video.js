@@ -106,6 +106,13 @@
             "  z-index: 2147483646 !important;" +
             "  background-color: black !important;" +
             "  display: block !important;" +
+            "  transform: none !important;" +
+            "  filter: none !important;" +
+            "  contain: none !important;" +
+            "  backdrop-filter: none !important;" +
+            "  perspective: none !important;" +
+            "  clip-path: none !important;" +
+            "  will-change: auto !important;" +
             "}" +
             ".no-scroll-webview { overflow: hidden !important; }";
         document.head.appendChild(style);
@@ -275,7 +282,14 @@
                               "padding: 0 !important; " +
                               "background-color: black !important; " +
                               "display: block !important; " +
-                              "box-sizing: border-box !important;";
+                              "box-sizing: border-box !important; " +
+                              "transform: none !important; " +
+                              "filter: none !important; " +
+                              "contain: none !important; " +
+                              "backdrop-filter: none !important; " +
+                              "perspective: none !important; " +
+                              "clip-path: none !important; " +
+                              "will-change: auto !important;";
                               
                     if (currentNode.tagName === 'VIDEO') {
                         css += " object-fit: contain !important;";
