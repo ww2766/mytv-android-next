@@ -96,7 +96,10 @@ fun WebViewComponent(
                     settings.setSupportZoom(false)
                     settings.displayZoomControls = false
                     settings.builtInZoomControls = false
-                    settings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                        settings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+                        android.webkit.CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
+                    }
                     settings.mediaPlaybackRequiresUserGesture = false
                     // 允许跨域请求（针对文件协议）
                     settings.setAllowUniversalAccessFromFileURLs(true); // 允许文件协议跨域
@@ -116,6 +119,15 @@ fun WebViewComponent(
                         override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
                             super.onPageStarted(view, url, favicon)
                             view?.evaluateJavascript("window.__myPluginInitialized = false;", null)
+                        }
+
+                        @SuppressLint("WebViewClientOnReceivedSslError")
+                        override fun onReceivedSslError(
+                            view: WebView?,
+                            handler: android.webkit.SslErrorHandler?,
+                            error: android.net.http.SslError?
+                        ) {
+                            handler?.proceed()
                         }
 
                         override fun onPageFinished(view: WebView?, url: String?) {

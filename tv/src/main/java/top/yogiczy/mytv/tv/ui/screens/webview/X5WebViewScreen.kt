@@ -94,6 +94,7 @@ fun X5WebViewScreen(
                     settings.builtInZoomControls = false
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                         settings.mixedContentMode = android.webkit.WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+                        com.tencent.smtt.sdk.CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
                     }
                     settings.mediaPlaybackRequiresUserGesture = false
                     settingsExtension?.setPicModel(IX5WebSettingsExtension.PicModel_NoPic)
@@ -113,6 +114,14 @@ fun X5WebViewScreen(
                         override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
                             super.onPageStarted(view, url, favicon)
                             view?.evaluateJavascript("window.__myPluginInitialized = false;", null)
+                        }
+
+                        override fun onReceivedSslError(
+                            view: WebView?,
+                            handler: com.tencent.smtt.export.external.interfaces.SslErrorHandler?,
+                            error: com.tencent.smtt.export.external.interfaces.SslError?
+                        ) {
+                            handler?.proceed()
                         }
 
                         override fun onPageFinished(view: WebView?, url: String?) {

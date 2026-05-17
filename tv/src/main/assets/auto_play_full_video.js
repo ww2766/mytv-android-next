@@ -179,6 +179,141 @@
         isEventListenerBound = true;
         console.log('Plugin initialized.');
     }
+    // =================【自动换台：根据 URL 参数模拟点击】=================
+    function autoSwitchChannel() {
+        var targetChannel = null;
+
+        // 1. 从 search 参数获取 (例如 ?ch=CCTV1 或 ?channel=CCTV1)
+        var searchParams = new URLSearchParams(window.location.search);
+        targetChannel = searchParams.get('ch') || searchParams.get('channel');
+
+        // 2. 如果 search 没有，尝试从 hash 中获取 (例如 #/play?ch=CCTV1)
+        if (!targetChannel && window.location.hash) {
+            var hashStr = window.location.hash;
+            var qIndex = hashStr.indexOf('?');
+            if (qIndex !== -1) {
+                var hashParams = new URLSearchParams(hashStr.substring(qIndex));
+                targetChannel = hashParams.get('ch') || hashParams.get('channel');
+            }
+        }
+
+        if (!targetChannel) return;
+
+        console.log('[AutoSwitch] 启用 JS 模拟点击换台，目标频道:', targetChannel);
+        var maxRetries = 20; // 最多尝试 20 次，每次 500ms（共 10 秒等待 DOM 渲染）
+        var retryCount = 0;
+        var switched = false;
+
+        var timer = setInterval(function () {
+            if (switched || retryCount >= maxRetries) {
+                clearInterval(timer);
+                if (!switched) console.warn('[AutoSwitch] 放弃寻找，未找到匹配的频道节点:', targetChannel);
+                return;
+            }
+            retryCount++;
+
+            // 遍历常见的可能作为频道按钮的标签
+            var elements = document.querySelectorAll('a, li, span, div, p, button');
+            var matches = [];
+            for (var i = 0; i < elements.length; i++) {
+                var el = elements[i];
+                // 过滤掉内部包含大量子元素的巨大父级容器，精准定位叶子节点附近的元素
+                if (el.children.length > 3) continue;
+
+                // 核心防错 1：过滤掉会跳出新页面的超链接（如 target="_blank"）
+                if (el.tagName === 'A' && el.getAttribute('target') === '_blank') continue;
+
+                // 核心防错 2：过滤掉指向其他域名的外部超链接
+                if (el.tagName === 'A' && el.getAttribute('href')) {
+                    var href = el.getAttribute('href').trim();
+                    if (href.indexOf('http') === 0 && href.indexOf(window.location.host) === -1) {
+                        continue;
+                    }
+                }
+
+                var text = (el.innerText || el.textContent || '').trim();
+                if (!text) continue;
+
+                // 匹配策略：区分精准匹配与模糊包含匹配
+                var isExact = (text === targetChannel);
+                var isPartial = !isExact && (text.indexOf(targetChannel) !== -1 && text.length <= targetChannel.length + 8);
+
+                if (isExact || isPartial) {
+                    var rect = el.getBoundingClientRect();
+                    // 确保元素是可见的，并且尺寸合理（过滤掉 display:none 或尺寸奇大的干扰项）
+                    if (rect.width > 0 && rect.height > 0 && rect.width < 800 && rect.height < 300) {
+                        matches.push({
+                            el: el,
+                            isExact: isExact,
+                            childrenCount: el.children.length
+                        });
+                    }
+                }
+            }
+
+            if (matches.length > 0) {
+                // 核心优化 1：组合多重维度排序
+                // 优先级①：文字精准匹配 (isExact === true) 排最前，避免包含匹配误杀（如将 "新闻资讯" 误点到 "新闻资讯频道" 导航栏）
+                // 优先级②：子节点数量升序（叶子节点排前面，如 <li> 中的 <div>），保证点击事件完美冒泡
+                matches.sort(function (a, b) {
+                    if (a.isExact !== b.isExact) {
+                        return a.isExact ? -1 : 1;
+                    }
+                    return a.childrenCount - b.childrenCount;
+                });
+
+                var targetEl = matches[0].el;
+                console.log('[AutoSwitch] 成功定位到最佳频道节点，执行多重模拟点击:', targetEl, '文本:', (targetEl.innerText || targetEl.textContent || '').trim());
+
+                // 核心优化 2：模拟完整的鼠标/触摸交互事件序列（针对使用 mousedown、mouseup、touchstart 等非 click 事件的网站）
+                var triggerSequence = function (element) {
+                    // 1. 模拟 touchstart / touchend (如果设备支持)
+                    if ('ontouchstart' in window) {
+                        try {
+                            var tStart = document.createEvent('Event');
+                            tStart.initEvent('touchstart', true, true);
+                            element.dispatchEvent(tStart);
+
+                            var tEnd = document.createEvent('Event');
+                            tEnd.initEvent('touchend', true, true);
+                            element.dispatchEvent(tEnd);
+                        } catch (e) {}
+                    }
+
+                    // 2. 模拟 mousedown
+                    try {
+                        var mDown = document.createEvent('MouseEvents');
+                        mDown.initMouseEvent('mousedown', true, true, window, 0, 0, 0, 0, 0, false, false, false, false, 0, null);
+                        element.dispatchEvent(mDown);
+                    } catch (e) {}
+
+                    // 3. 模拟 mouseup
+                    try {
+                        var mUp = document.createEvent('MouseEvents');
+                        mUp.initMouseEvent('mouseup', true, true, window, 0, 0, 0, 0, 0, false, false, false, false, 0, null);
+                        element.dispatchEvent(mUp);
+                    } catch (e) {}
+
+                    // 4. 模拟 click
+                    try {
+                        if (typeof element.click === 'function') {
+                            element.click();
+                        } else {
+                            var mClick = document.createEvent('MouseEvents');
+                            mClick.initMouseEvent('click', true, true, window, 0, 0, 0, 0, 0, false, false, false, false, 0, null);
+                            element.dispatchEvent(mClick);
+                        }
+                    } catch (e) {}
+                };
+
+                triggerSequence(targetEl);
+
+                switched = true;
+                clearInterval(timer);
+                return;
+            }
+        }, 500);
+    }
 
     function handleKeyDown(event) {
         console.warn('handleKeyDown() start');
@@ -525,7 +660,7 @@
     function onPageLoad() {
         console.info('onPageLoad(): 页面加载完成，初始化插件...');
         initPlugin();
-
+        autoSwitchChannel(); // 注入自动换台逻辑
         if (typeof MutationObserver !== 'undefined') {
             var observer = new MutationObserver(function(mutations) {
                 for (var i = 0; i < mutations.length; i++) {
