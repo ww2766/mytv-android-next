@@ -139,7 +139,12 @@ fun MainContent(
 
             QbSdk.forceSysWebView()
             WebViewComponent(
-                urlProvider = { mainContentState.currentChannel.urlList[mainContentState.currentChannelUrlIdx] },
+                urlProvider = { 
+                    ChannelUtil.appendChannelParam(
+                        mainContentState.currentChannel.urlList[mainContentState.currentChannelUrlIdx],
+                        mainContentState.currentChannel.name
+                    )
+                },
                 onVideoResolutionChanged = { width, height ->
                     if(width==-100){
                         coroutineScope.launch(Dispatchers.IO) {
@@ -165,7 +170,12 @@ fun MainContent(
             //QbSdk.
             //mainContentState.isTempChannelScreenVisible = false
             X5WebViewScreen(
-                urlProvider = { mainContentState.currentChannel.urlList[mainContentState.currentChannelUrlIdx] },
+                urlProvider = { 
+                    ChannelUtil.appendChannelParam(
+                        mainContentState.currentChannel.urlList[mainContentState.currentChannelUrlIdx],
+                        mainContentState.currentChannel.name
+                    )
+                },
                 onVideoResolutionChanged = { width, height ->
                     if(width==-100){
                         coroutineScope.launch(Dispatchers.IO) {

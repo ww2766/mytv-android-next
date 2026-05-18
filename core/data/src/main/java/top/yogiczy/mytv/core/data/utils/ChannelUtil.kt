@@ -358,6 +358,27 @@ object ChannelUtil {
     fun clearAllPrefixFromUrl(url: String): String {
         return clearProxyPrefixFromUrl(clearHybridPrefixFromUrl(url))
     }
+
+    fun appendChannelParam(url: String, channelName: String): String {
+        if (url.contains("ch=") || url.contains("channel=")) {
+            return url
+        }
+        return try {
+            val encodedName = java.net.URLEncoder.encode(channelName, "UTF-8")
+            val chQuery = "ch=$encodedName"
+            if (url.contains("#")) {
+                val parts = url.split("#", limit = 2)
+                val base = parts[0]
+                val hash = parts[1]
+                val newHash = if (hash.contains("?")) "$hash&$chQuery" else "$hash?$chQuery"
+                "$base#$newHash"
+            } else {
+                if (url.contains("?")) "$url&$chQuery" else "$url?$chQuery"
+            }
+        } catch (e: Exception) {
+            url
+        }
+    }
     fun getHybridWebViewUrlProvider(url: String): String {
         return if (url.contains("https://tv.cctv.com")) "央视网"
         else if (url.contains("https://yangshipin.cn")) "央视频"
